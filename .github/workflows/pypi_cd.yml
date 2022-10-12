@@ -8,10 +8,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
-      - uses: casperdcl/deploy-pypi@v2
+      - name: Install dependencies
+        run: pip install wheel
+      - name: Build package
+        run: python setup.py sdist bdist_wheel
+      - name: Publish package
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PROD_PYPI_COMPUTATIONAL_MS }}
-          requirements: twine wheel
-          pip: wheel -w dist/ --no-deps .
-          # only upload if a tag is pushed (otherwise just build & check)
-          upload: ${{ github.event_name == 'create' && startsWith(github.event.ref, 'v') }}
