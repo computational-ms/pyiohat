@@ -1,6 +1,6 @@
 import pytest
 
-from unify_idents.engine_parsers.base_parser import BaseParser
+from pyprotista.engine_parsers.base_parser import BaseParser
 
 
 def test_uninitialized_parser_compatiblity_is_false():

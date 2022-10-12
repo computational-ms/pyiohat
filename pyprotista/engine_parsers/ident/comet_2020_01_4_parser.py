@@ -10,7 +10,7 @@ from loguru import logger
 from lxml import etree
 from tqdm import tqdm
 
-from unify_idents.engine_parsers.ident.ident_base_parser import IdentBaseParser
+from pyprotista.engine_parsers.ident.ident_base_parser import IdentBaseParser
 
 
 def _mp_specs_init(func, reference_dict, mapping_dict):

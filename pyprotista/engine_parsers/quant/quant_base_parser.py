@@ -2,7 +2,7 @@
 
 from chemical_composition import ChemicalComposition
 
-from unify_idents.engine_parsers.base_parser import BaseParser
+from pyprotista.engine_parsers.base_parser import BaseParser
 
 
 class QuantBaseParser(BaseParser):

@@ -3,19 +3,19 @@ from pathlib import Path
 
 import pytest
 
-import unify_idents
-from unify_idents.engine_parsers.ident.comet_2020_01_4_parser import (
+import pyprotista
+from pyprotista.engine_parsers.ident.comet_2020_01_4_parser import (
     Comet_2020_01_4_Parser,
 )
-from unify_idents.engine_parsers.ident.mascot_2_6_2_parser import Mascot_2_6_2_Parser
-from unify_idents.engine_parsers.ident.msamanda_2_parser import MSAmanda_2_Parser
-from unify_idents.engine_parsers.ident.msfragger_3_parser import MSFragger_3_Parser
-from unify_idents.engine_parsers.ident.msgfplus_2021_03_22_parser import (
+from pyprotista.engine_parsers.ident.mascot_2_6_2_parser import Mascot_2_6_2_Parser
+from pyprotista.engine_parsers.ident.msamanda_2_parser import MSAmanda_2_Parser
+from pyprotista.engine_parsers.ident.msfragger_3_parser import MSFragger_3_Parser
+from pyprotista.engine_parsers.ident.msgfplus_2021_03_22_parser import (
     MSGFPlus_2021_03_22_Parser,
 )
-from unify_idents.engine_parsers.ident.omssa_2_1_9_parser import Omssa_Parser
-from unify_idents.engine_parsers.ident.xtandem_alanine import XTandemAlanine_Parser
-from unify_idents.unify import Unify
+from pyprotista.engine_parsers.ident.omssa_2_1_9_parser import Omssa_Parser
+from pyprotista.engine_parsers.ident.xtandem_alanine import XTandemAlanine_Parser
+from pyprotista.unify import Unify
 
 
 def test_unify_get_parser_classes():
@@ -57,7 +57,7 @@ def test_unify_get_parser_classes():
     ident_files = (
         len(
             list(
-                (Path(unify_idents.__path__[0]) / "engine_parsers" / "ident").glob(
+                (Path(pyprotista.__path__[0]) / "engine_parsers" / "ident").glob(
                     "*.py"
                 )
             )
@@ -67,7 +67,7 @@ def test_unify_get_parser_classes():
     quant_files = (
         len(
             list(
-                (Path(unify_idents.__path__[0]) / "engine_parsers" / "quant").glob(
+                (Path(pyprotista.__path__[0]) / "engine_parsers" / "quant").glob(
                     "*.py"
                 )
             )

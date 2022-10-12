@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 from lxml import etree
 
-from unify_idents.engine_parsers.ident.msgfplus_2021_03_22_parser import (
+from pyprotista.engine_parsers.ident.msgfplus_2021_03_22_parser import (
     MSGFPlus_2021_03_22_Parser,
     _get_single_spec_df,
 )

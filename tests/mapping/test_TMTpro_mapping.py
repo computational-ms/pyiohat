@@ -1,6 +1,6 @@
 import pytest
 
-import unify_idents
+import pyprotista
 
 COMET_TEST_FILE = pytest._test_path / "data" / "mapping_data" / "trunc_comet.mzid"
 # MASCOT_TEST_FILE = ""
@@ -70,7 +70,7 @@ PARAMS = {
 
 
 def test_comet_mapping():
-    df = unify_idents.Unify(input_file=COMET_TEST_FILE, params=PARAMS).get_dataframe()
+    df = pyprotista.Unify(input_file=COMET_TEST_FILE, params=PARAMS).get_dataframe()
     mod_str = df.loc[0, "modifications"]
     assert mod_str == "TMTpro:0;Carbamidomethyl:8;Oxidation:12;Carbamidomethyl:19"
 
@@ -88,7 +88,7 @@ def test_comet_mapping():
 
 
 def test_msfragger_mapping():
-    df = unify_idents.Unify(
+    df = pyprotista.Unify(
         input_file=MSFRAGGER_TEST_FILE, params=PARAMS
     ).get_dataframe()
     mod_str = df.loc[0, "modifications"]
@@ -96,7 +96,7 @@ def test_msfragger_mapping():
 
 
 def test_msgfplus_mapping():
-    df = unify_idents.Unify(
+    df = pyprotista.Unify(
         input_file=MSGFPLUS_TEST_FILE, params=PARAMS
     ).get_dataframe()
     mod_str = df.loc[0, "modifications"]
@@ -104,7 +104,7 @@ def test_msgfplus_mapping():
 
 
 def test_omssa_mapping():
-    df = unify_idents.Unify(input_file=OMSSA_TEST_FILE, params=PARAMS).get_dataframe()
+    df = pyprotista.Unify(input_file=OMSSA_TEST_FILE, params=PARAMS).get_dataframe()
     mod_str = df.loc[0, "modifications"]
     assert (
         mod_str == "TMTpro:0;Carbamidomethyl:5;Carbamidomethyl:17;TMTpro:20;TMTpro:27"
@@ -112,6 +112,6 @@ def test_omssa_mapping():
 
 
 def test_xtandem_mapping():
-    df = unify_idents.Unify(input_file=XTANDEM_TEST_FILE, params=PARAMS).get_dataframe()
+    df = pyprotista.Unify(input_file=XTANDEM_TEST_FILE, params=PARAMS).get_dataframe()
     mod_str = df.loc[0, "modifications"]
     assert mod_str == "TMTpro:0;Oxidation:6;Carbamidomethyl:7"

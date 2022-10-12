@@ -5,9 +5,9 @@ import pandas as pd
 import pytest
 from chemical_composition import ChemicalComposition
 
-from unify_idents.engine_parsers.ident.ident_base_parser import IdentBaseParser
-from unify_idents.engine_parsers.misc import get_composition_and_mass_and_accuracy
-from unify_idents.utils import merge_and_join_dicts
+from pyprotista.engine_parsers.ident.ident_base_parser import IdentBaseParser
+from pyprotista.engine_parsers.misc import get_composition_and_mass_and_accuracy
+from pyprotista.utils import merge_and_join_dicts
 
 
 def test_base_parser_read_rt_lookup_file():

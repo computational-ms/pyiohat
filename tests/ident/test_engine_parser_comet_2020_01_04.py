@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from lxml import etree
 
-from unify_idents.engine_parsers.ident.comet_2020_01_4_parser import (
+from pyprotista.engine_parsers.ident.comet_2020_01_4_parser import (
     Comet_2020_01_4_Parser,
     _get_single_spec_df,
 )
