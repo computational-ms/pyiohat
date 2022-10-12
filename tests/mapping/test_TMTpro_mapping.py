@@ -88,17 +88,13 @@ def test_comet_mapping():
 
 
 def test_msfragger_mapping():
-    df = pyprotista.Unify(
-        input_file=MSFRAGGER_TEST_FILE, params=PARAMS
-    ).get_dataframe()
+    df = pyprotista.Unify(input_file=MSFRAGGER_TEST_FILE, params=PARAMS).get_dataframe()
     mod_str = df.loc[0, "modifications"]
     assert mod_str == "TMTpro:0;Carbamidomethyl:6"
 
 
 def test_msgfplus_mapping():
-    df = pyprotista.Unify(
-        input_file=MSGFPLUS_TEST_FILE, params=PARAMS
-    ).get_dataframe()
+    df = pyprotista.Unify(input_file=MSGFPLUS_TEST_FILE, params=PARAMS).get_dataframe()
     mod_str = df.loc[0, "modifications"]
     assert mod_str == "TMTpro:0;Oxidation:7;Carbamidomethyl:14;TMTpro:26;TMTpro:27"
 

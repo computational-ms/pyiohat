@@ -57,9 +57,7 @@ def test_unify_get_parser_classes():
     ident_files = (
         len(
             list(
-                (Path(pyprotista.__path__[0]) / "engine_parsers" / "ident").glob(
-                    "*.py"
-                )
+                (Path(pyprotista.__path__[0]) / "engine_parsers" / "ident").glob("*.py")
             )
         )
         - 1
@@ -67,9 +65,7 @@ def test_unify_get_parser_classes():
     quant_files = (
         len(
             list(
-                (Path(pyprotista.__path__[0]) / "engine_parsers" / "quant").glob(
-                    "*.py"
-                )
+                (Path(pyprotista.__path__[0]) / "engine_parsers" / "quant").glob("*.py")
             )
         )
         - 1
