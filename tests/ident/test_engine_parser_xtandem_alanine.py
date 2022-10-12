@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 from lxml import etree
 
-from unify_idents.engine_parsers.ident.xtandem_alanine import (
+from pyprotista.engine_parsers.ident.xtandem_alanine import (
     XTandemAlanine_Parser,
     _get_single_spec_df,
 )

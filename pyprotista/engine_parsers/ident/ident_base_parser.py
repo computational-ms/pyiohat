@@ -9,13 +9,13 @@ from loguru import logger
 from peptide_mapper.mapper import UPeptideMapper
 from unimod_mapper.unimod_mapper import UnimodMapper
 
-from unify_idents.engine_parsers.base_parser import BaseParser
-from unify_idents.engine_parsers.misc import (
+from pyprotista.engine_parsers.base_parser import BaseParser
+from pyprotista.engine_parsers.misc import (
     get_composition_and_mass_and_accuracy,
     init_custom_cc,
     trunc,
 )
-from unify_idents.utils import merge_and_join_dicts
+from pyprotista.utils import merge_and_join_dicts
 
 
 class IdentBaseParser(BaseParser):

@@ -1,5 +1,5 @@
 from pathlib import Path
-from unify_idents.unify import Unify
+from pyprotista.unify import Unify
 import sys
 
 

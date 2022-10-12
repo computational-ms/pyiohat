@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from unify_idents.engine_parsers.quant.quant_base_parser import QuantBaseParser
+from pyprotista.engine_parsers.quant.quant_base_parser import QuantBaseParser
 
 
 class FlashLFQ_1_2_0_Parser(QuantBaseParser):

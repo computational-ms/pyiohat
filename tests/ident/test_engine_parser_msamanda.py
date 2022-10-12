@@ -2,7 +2,7 @@
 
 import pytest
 
-from unify_idents.engine_parsers.ident.msamanda_2_parser import MSAmanda_2_Parser
+from pyprotista.engine_parsers.ident.msamanda_2_parser import MSAmanda_2_Parser
 
 
 def test_engine_parsers_msamanda_init():
