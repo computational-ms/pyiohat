@@ -1,10 +1,10 @@
 """Engine parser."""
 import multiprocessing as mp
+import sys
 from io import BytesIO
 
 import pandas as pd
 import regex as re
-import sys
 from loguru import logger
 from lxml import etree
 from tqdm import tqdm
