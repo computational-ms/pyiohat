@@ -3,7 +3,7 @@
 import pandas as pd
 import pytest
 
-from pyprotista.engine_parsers.ident.mascot_2_6_2_parser import (
+from pyprotista.parsers.ident.mascot_2_6_2_parser import (
     Mascot_2_6_2_Parser,
     _get_single_spec_df,
 )

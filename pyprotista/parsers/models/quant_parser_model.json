@@ -1,0 +1,47 @@
+[
+  {
+    "name": "trivial_name",
+    "description": "Trivial compound name",
+    "dtype": "str"
+  },
+  {
+    "name": "quant_value",
+    "description": "Quantification result value",
+    "dtype": "float32"
+  },
+  {
+    "name": "quant_score",
+    "description": "Quantification score value (e.g. m-score)",
+    "dtype": "float32"
+  },
+  {
+    "name": "quant_group",
+    "description": "Quantification result group identifier",
+    "dtype": "str"
+  },
+  {
+  "name": "accuracy_mz",
+  "description": "Numerical difference between theoretical and measured m/z (old delta_mz)",
+  "dtype": "float32"
+  },
+  {
+    "name": "label",
+    "description": "Mass label",
+    "dtype": "str"
+  },
+  {
+    "name": "ccs",
+    "description": "Collision cross section",
+    "dtype": "float32"
+  },
+  {
+    "name": "ident_reference",
+    "description": "Spectrum ID of identification",
+    "dtype": "Int32"
+  },
+  {
+    "name": "fwhm",
+    "description": "Full width at half maximum",
+    "dtype": "float32"
+  }
+]

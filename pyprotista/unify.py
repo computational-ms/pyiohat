@@ -4,14 +4,14 @@ from pathlib import Path
 
 import pandas as pd
 
-from pyprotista.engine_parsers.base_parser import BaseParser
+from pyprotista.parsers.base_parser import BaseParser
 
 
 class Unify:
     """Interface to unify ident outputs from different engines.
 
     Attributes:
-        parser (`pyprotista.engine_parsers.base_parser.__BaseParser`): Parser fitting the specified input_file
+        parser (`pyprotista.parsers.base_parser.__BaseParser`): Parser fitting the specified input_file
 
     """
 
@@ -46,7 +46,7 @@ class Unify:
         Raises error if no matching parser can be found.
         """
         # Get all files except __init__.pys
-        parser_files = (Path(__file__).parent / "engine_parsers").rglob("[!_]*.py")
+        parser_files = (Path(__file__).parent / "parsers").rglob("[!_]*.py")
         # Make paths relative to package
         parser_files = [
             p.relative_to(Path(__file__).parent.parent).as_posix() for p in parser_files

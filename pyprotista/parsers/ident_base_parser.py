@@ -9,8 +9,8 @@ from loguru import logger
 from peptide_mapper.mapper import UPeptideMapper
 from unimod_mapper.unimod_mapper import UnimodMapper
 
-from pyprotista.engine_parsers.base_parser import BaseParser
-from pyprotista.engine_parsers.misc import (
+from pyprotista.parsers.base_parser import BaseParser
+from pyprotista.parsers.misc import (
     get_composition_and_mass_and_accuracy,
     init_custom_cc,
     trunc,
@@ -37,43 +37,13 @@ class IdentBaseParser(BaseParser):
         self.mod_dict = self._create_mod_dicts()
         self.rt_truncate_precision = 2
         self.reference_dict = {
-            "exp_mz": None,
-            "calc_mz": None,
-            "spectrum_title": None,
             "search_engine": None,
             "spectrum_id": None,
             "modifications": None,
             "retention_time_seconds": None,
         }
-        self.dtype_mapping = {
-            "spectrum_title": "str",
-            "raw_data_location": "str",
-            "spectrum_id": "int32",
-            "sequence": "str",
-            "modifications": "str",
-            "charge": "int32",
-            "is_decoy": "bool",
-            "is_immutable": "bool",
-            "rank": "int32",
-            "protein_id": "str",
-            "retention_time_seconds": "float32",
-            "exp_mz": "float32",
-            "calc_mz": "float32",
-            "ucalc_mz": "float32",
-            "ucalc_mass": "float32",
-            "accuracy_ppm": "float32",
-            "accuracy_ppm_C12": "float32",
-            "chemical_composition": "str",
-            "sequence_start": "str",
-            "sequence_stop": "str",
-            "sequence_pre_aa": "str",
-            "sequence_post_aa": "str",
-            "enzn": "str",
-            "enzc": "str",
-            "missed_cleavages": "int32",
-            "search_engine": "str",
-        }
-        self.col_order = pd.Series(self.dtype_mapping.keys())
+        self.required_headers = self._load_model("ident_parser_model.json")
+        self.col_order = pd.Series(self.required_headers.keys())
 
     def _calc_mz(self, mass, charge):
         """Calculate mass-to-charge ratio.
@@ -446,49 +416,8 @@ class IdentBaseParser(BaseParser):
                 sum([len(match) for _, match in auto.iter_long(seq)]) == len(seq)
                 for seq in self.df["sequence"]
             ]
-
-    def sanitize(self):
-        """Perform dataframe sanitation steps.
-
-        - Missing raw data locations are filled with empty strings
-        - Columns that were not filled in but should exist in the unified format are added and set to None
-        - Columns in the dataframe which could not be properly mapped are removed (warning is raised)
-        Operations are performed inplace on self.df
-        """
-        missing_data_locs = ~(self.df["raw_data_location"].str.len() > 0)
-        self.df.loc[missing_data_locs, "raw_data_location"] = ""
-        # Set missing columns to None and reorder columns in standardized manner
-        new_cols = self.col_order[~self.col_order.isin(self.df.columns)].to_list()
-        self.df.loc[:, new_cols] = None
-        self.df = self.df.loc[
-            :,
-            self.col_order.tolist()
-            + sorted(self.df.columns[~self.df.columns.isin(self.col_order)].tolist()),
-        ]
-        self.df = self.df.astype(self.dtype_mapping)
-        # Ensure there are not any column that should not be
-        if hasattr(self, "mapping_dict"):
-            new_cols = set(self.mapping_dict.keys())
         else:
-            new_cols = set()
-        additional_cols = set(self.df.columns).difference(
-            set(self.dtype_mapping.keys()) | new_cols
-        )
-        unmapped_add_cols = [c for c in additional_cols if ":" not in c]
-        if len(unmapped_add_cols) > 0:
-            logger.warning(
-                f"Some engine level columns ({unmapped_add_cols}) were not properly mapped and removed."
-            )
-            self.df.drop(columns=unmapped_add_cols, inplace=True, errors="ignore")
-
-        # Drop unwanted duplicated rows
-        init_len = len(self.df)
-        self.df.drop_duplicates(inplace=True)
-        rows_dropped = init_len - len(self.df)
-        if rows_dropped != 0:
-            logger.warning(
-                f"{rows_dropped} duplicated rows were dropped in output csv."
-            )
+            self.df.loc[:, "is_immutable"] = False
 
     def process_unify_style(self):
         """Combine all additional operations that are needed to calculate new columns and sanitize the dataframe.

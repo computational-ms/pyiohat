@@ -1,0 +1,37 @@
+[
+  {
+    "name": "raw_data_location",
+    "description": "Source data unique object name",
+    "dtype": "str"
+  },
+  {
+    "name": "spectrum_id",
+    "description": "Source Spectrum ID",
+    "dtype": "Int32"
+  },
+  {
+    "name": "charge",
+    "description": "Molecule charge state",
+    "dtype": "Int32"
+  },
+  {
+    "name": "retention_time_seconds",
+    "description": "MS retention time in seconds",
+    "dtype": "float32"
+  },
+  {
+    "name": "accuracy_ppm",
+    "description": "Mass accuracy (in ppm) including isotopologues",
+    "dtype": "float32"
+  },
+  {
+    "name": "accuracy_ppm_C12",
+    "description": "Mass accuracy (in ppm) to monoisotopic mass",
+    "dtype": "float32"
+  },
+  {
+    "name": "chemical_composition",
+    "description": "Chemical composition of molecule",
+    "dtype": "str"
+  }
+]
