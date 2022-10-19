@@ -1,5 +1,5 @@
 """Dummy parser."""
-from pyprotista.engine_parsers.ident.ident_base_parser import IdentBaseParser
+from pyprotista.parsers.ident_base_parser import IdentBaseParser
 
 
 class Dummy(IdentBaseParser):

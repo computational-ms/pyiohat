@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 
-from pyprotista.engine_parsers.ident.ident_base_parser import IdentBaseParser
+from pyprotista.parsers.ident_base_parser import IdentBaseParser
 
 
 class Omssa_Parser(IdentBaseParser):
@@ -151,9 +151,6 @@ class Omssa_Parser(IdentBaseParser):
         Returns:
             self.df (pd.DataFrame): unified dataframe
         """
-        self.df["calc_mz"] = self._calc_mz(
-            mass=self.df["calc_mz"], charge=self.df["charge"]
-        )
         self.df["spectrum_id"] = (
             self.df["spectrum_title"].str.split(".").str[-3].astype(int)
         )

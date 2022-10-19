@@ -1,0 +1,92 @@
+[
+  {
+    "name": "spectrum_title",
+    "description": "Custom spectrum title text",
+    "dtype": "str"
+  },
+  {
+    "name": "sequence",
+    "description": "Amino acid sequence",
+    "dtype": "str"
+  },
+  {
+    "name": "modifications",
+    "description": "Modified amino acids and sites. Format: <Modifications>:<Position>;[...]",
+    "dtype": "str"
+  },
+  {
+    "name": "is_decoy",
+    "description": "True if the ident is a decoy, False if ident is target",
+    "dtype": "bool"
+  },
+  {
+    "name": "is_immutable",
+    "description": "True if no suitable decoy could be generated for ident",
+    "dtype": "bool"
+  },
+  {
+    "name": "rank",
+    "description": "Engine level rank",
+    "dtype": "Int32"
+  },
+  {
+    "name": "protein_id",
+    "description": "Mapped protein identifiers",
+    "dtype": "str"
+  },
+  {
+    "name": "exp_mz",
+    "description": "Experimental m/z ratio, remapped by pyProtista using MS run metainfo",
+    "dtype": "float32"
+  },
+  {
+    "name": "ucalc_mz",
+    "description": "Ursgal calculated m/z ratio, recalculated by pyProtista using ucalc_mass",
+    "dtype": "float32"
+  },
+  {
+    "name": "ucalc_mass",
+    "description": "Ursgal calculated C12 mass using the chemical formula as computed by chemical_composition",
+    "dtype": "float32"
+  },
+  {
+    "name": "sequence_start",
+    "description": "Position of sequence start",
+    "dtype": "str"
+  },
+  {
+    "name": "sequence_stop",
+    "description": "Position of sequence stop",
+    "dtype": "str"
+  },
+  {
+    "name": "sequence_pre_aa",
+    "description": "Sequence preceding identified sequence",
+    "dtype": "str"
+  },
+  {
+    "name": "sequence_post_aa",
+    "description": "Sequence tailing identified sequence",
+    "dtype": "str"
+  },
+  {
+    "name": "enzn",
+    "description": "N-terminal enzyme cleavage site consistency",
+    "dtype": "bool"
+  },
+  {
+    "name": "enzc",
+    "description": "C-terminal enzyme cleavage site consistency",
+    "dtype": "bool"
+  },
+  {
+    "name": "missed_cleavages",
+    "description": "Numer of missed enzymatic cleavages",
+    "dtype": "Int32"
+  },
+  {
+    "name": "search_engine",
+    "description": "Name and version of the utilized search engine",
+    "dtype": "str"
+  }
+]
