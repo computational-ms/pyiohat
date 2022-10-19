@@ -35,4 +35,5 @@ def branch_dependent_version():
 setuptools.setup(
     use_scm_version=branch_dependent_version,
     setup_requires=["setuptools_scm"],
+    include_package_data=True
 )
