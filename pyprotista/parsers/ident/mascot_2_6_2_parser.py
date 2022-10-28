@@ -1,15 +1,15 @@
 """Engine parser."""
 import multiprocessing as mp
+import sys
+from itertools import repeat
 
 import numpy as np
 import pandas as pd
 import regex as re
-import sys
-from itertools import repeat
 from loguru import logger
 from tqdm import tqdm
 
-from pyprotista.engine_parsers.ident.ident_base_parser import IdentBaseParser
+from pyprotista.parsers.ident_base_parser import IdentBaseParser
 from pyprotista.utils import merge_and_join_dicts
 
 mascot_custom_psm_regex = re.compile(
@@ -85,7 +85,7 @@ class Mascot_2_6_2_Parser(IdentBaseParser):
         self.reference_dict["search_engine"] = "mascot_" + re.search(
             r"(?<=version=).*", self.section_data["header"]
         ).group().replace(".", "_")
-        self.reference_dict["mascot:score"] = None
+        self.reference_dict["mascot:score"] = pd.NA
 
     @classmethod
     def check_parser_compatibility(cls, file):
@@ -252,9 +252,6 @@ class Mascot_2_6_2_Parser(IdentBaseParser):
             self.df["spectrum_title"]
             .str.replace("%2e", ".", regex=False)
             .str.replace(".mzML", "", regex=False)
-        )
-        self.df.loc[:, "calc_mz"] = self._calc_mz(
-            mass=self.df["exp_mz"], charge=self.df["charge"]
         )
         self._format_mods()
         self.process_unify_style()

@@ -5,8 +5,8 @@ import pandas as pd
 import pytest
 from chemical_composition import ChemicalComposition
 
-from pyprotista.engine_parsers.ident.ident_base_parser import IdentBaseParser
-from pyprotista.engine_parsers.misc import get_composition_and_mass_and_accuracy
+from pyprotista.parsers.ident_base_parser import IdentBaseParser
+from pyprotista.parsers.misc import get_composition_and_mass_and_accuracy
 from pyprotista.utils import merge_and_join_dicts
 
 
@@ -82,9 +82,15 @@ def test_engine_parsers_IdentBase_Parser_sanitize():
         columns=obj.col_order.to_list()
         + ["Engine:C", "Engine:B", "Engine:A", "This should not exist"],
     )
+    str_cols = [c for c, dtype in obj.required_headers.items() if dtype == "str"]
+    int_cols = [c for c, dtype in obj.required_headers.items() if dtype == "Int32"]
+    bool_cols = [c for c, dtype in obj.required_headers.items() if dtype == "bool"]
+    obj.df.loc[:, str_cols] = "4"
+    obj.df.loc[:, int_cols] = "2"
+    obj.df.loc[:, bool_cols] = False
     obj.df["raw_data_location"] = "test.mgf"
     obj.df["spectrum_title"] = "spec_title.this_should_go"
-    obj.df.loc[3, "raw_data_location"] = None
+    obj.df.loc[3, "raw_data_location"] = np.nan
     obj.df["modifications"] = "ZZ:1;AA:8"
     obj.sanitize()
     assert obj.df.loc[3, "raw_data_location"] == ""

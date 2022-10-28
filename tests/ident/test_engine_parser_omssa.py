@@ -2,7 +2,7 @@
 
 import pytest
 
-from pyprotista.engine_parsers.ident.omssa_2_1_9_parser import Omssa_Parser
+from pyprotista.parsers.ident.omssa_2_1_9_parser import Omssa_Parser
 
 
 def test_engine_parsers_omssa_init():

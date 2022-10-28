@@ -8,7 +8,7 @@ from loguru import logger
 from lxml import etree
 from tqdm import tqdm
 
-from pyprotista.engine_parsers.ident.ident_base_parser import IdentBaseParser
+from pyprotista.parsers.ident_base_parser import IdentBaseParser
 
 
 def _mp_specs_init(func, reference_dict, mapping_dict):
@@ -50,8 +50,6 @@ def _get_single_spec_df(spectrum):
     # Iterate children
     for psm in spectrum.findall(".//protein/*/domain"):
         psm_level_dict = spec_level_dict.copy()
-
-        psm_level_dict["calc_mz"] = psm.attrib["mh"]
 
         psm_level_info = _get_single_spec_df.mapping_dict.keys() & psm.attrib.keys()
         psm_level_dict.update(
@@ -196,10 +194,6 @@ class XTandemAlanine_Parser(IdentBaseParser):
             )
         chunk_dfs = [df for df in chunk_dfs if not df is None]
         self.df = pd.concat(chunk_dfs, axis=0, ignore_index=True)
-        self.df["calc_mz"] = (
-            (self.df["calc_mz"].astype(float) - self.PROTON)
-            / self.df["charge"].astype(int)
-        ) + self.PROTON
         self.df = self.map_mod_names(self.df)
         self.process_unify_style()
 

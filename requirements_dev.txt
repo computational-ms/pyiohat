@@ -1,5 +1,0 @@
-tox
-pytest
-coverage
-build
-wheel

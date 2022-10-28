@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 from lxml import etree
 
-from pyprotista.engine_parsers.ident.xtandem_alanine import (
+from pyprotista.parsers.ident.xtandem_alanine import (
     XTandemAlanine_Parser,
     _get_single_spec_df,
 )
@@ -164,7 +164,7 @@ def test_get_single_spec_df():
         == np.array(
             [
                 None,
-                "1315.5700",
+                None,
                 "test_Creinhardtii_QE_pH11.10381.10381.3",
                 "path/for/glory.mgf",
                 "xtandem_alanine",

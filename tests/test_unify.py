@@ -4,17 +4,17 @@ from pathlib import Path
 import pytest
 
 import pyprotista
-from pyprotista.engine_parsers.ident.comet_2020_01_4_parser import (
+from pyprotista.parsers.ident.comet_2020_01_4_parser import (
     Comet_2020_01_4_Parser,
 )
-from pyprotista.engine_parsers.ident.mascot_2_6_2_parser import Mascot_2_6_2_Parser
-from pyprotista.engine_parsers.ident.msamanda_2_parser import MSAmanda_2_Parser
-from pyprotista.engine_parsers.ident.msfragger_3_parser import MSFragger_3_Parser
-from pyprotista.engine_parsers.ident.msgfplus_2021_03_22_parser import (
+from pyprotista.parsers.ident.mascot_2_6_2_parser import Mascot_2_6_2_Parser
+from pyprotista.parsers.ident.msamanda_2_parser import MSAmanda_2_Parser
+from pyprotista.parsers.ident.msfragger_3_parser import MSFragger_3_Parser
+from pyprotista.parsers.ident.msgfplus_2021_03_22_parser import (
     MSGFPlus_2021_03_22_Parser,
 )
-from pyprotista.engine_parsers.ident.omssa_2_1_9_parser import Omssa_Parser
-from pyprotista.engine_parsers.ident.xtandem_alanine import XTandemAlanine_Parser
+from pyprotista.parsers.ident.omssa_2_1_9_parser import Omssa_Parser
+from pyprotista.parsers.ident.xtandem_alanine import XTandemAlanine_Parser
 from pyprotista.unify import Unify
 
 
@@ -55,23 +55,12 @@ def test_unify_get_parser_classes():
     )
     # Get files and subtract __init__.py
     ident_files = (
-        len(
-            list(
-                (Path(pyprotista.__path__[0]) / "engine_parsers" / "ident").glob("*.py")
-            )
-        )
-        - 1
+        len(list((Path(pyprotista.__path__[0]) / "parsers" / "ident").glob("*.py"))) - 1
     )
     quant_files = (
-        len(
-            list(
-                (Path(pyprotista.__path__[0]) / "engine_parsers" / "quant").glob("*.py")
-            )
-        )
-        - 1
+        len(list((Path(pyprotista.__path__[0]) / "parsers" / "quant").glob("*.py"))) - 1
     )
-    # Minus two because of the two base classes
-    assert len(u._parser_classes) == ident_files + quant_files - 2
+    assert len(u._parser_classes) == ident_files + quant_files
 
 
 def test_unify_get_omssa_parser():

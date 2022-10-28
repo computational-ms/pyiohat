@@ -1,10 +1,11 @@
 """Engine parser."""
 import itertools
+
 import pandas as pd
 import regex as re
 from loguru import logger
 
-from pyprotista.engine_parsers.ident.ident_base_parser import IdentBaseParser
+from pyprotista.parsers.ident_base_parser import IdentBaseParser
 
 
 class MSFragger_3_Parser(IdentBaseParser):
@@ -101,7 +102,11 @@ class MSFragger_3_Parser(IdentBaseParser):
             name = map_dict[mass]
             if len(name) > 0:
                 for m in name:
-                    if any(["N-term" in p for p in self.mod_dict[m]["position"]]):
+                    pos = int(re.search(r"^\d+", mod).group(0))
+                    if (
+                        any(["N-term" in p for p in self.mod_dict[m]["position"]])
+                        and pos == 1
+                    ):
                         pos = 0
                     else:
                         pos = int(re.search(r"^\d+", mod).group(0))
@@ -184,10 +189,6 @@ class MSFragger_3_Parser(IdentBaseParser):
         self.df["retention_time_seconds"] *= 60.0
         self.df["exp_mz"] = self._calc_mz(
             mass=self.df["msfragger:precursor_neutral_mass_da"],
-            charge=self.df["charge"],
-        )
-        self.df["calc_mz"] = self._calc_mz(
-            mass=self.df["msfragger:neutral_mass_of_peptide"],
             charge=self.df["charge"],
         )
         self.df["modifications"] = self.translate_mods()

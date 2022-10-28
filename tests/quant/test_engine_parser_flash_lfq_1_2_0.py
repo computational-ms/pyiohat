@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import pytest
 
-from pyprotista.engine_parsers.quant.flash_lfq_1_2_0_parser import (
+from pyprotista.parsers.quant.flash_lfq_1_2_0_parser import (
     FlashLFQ_1_2_0_Parser,
 )
 
