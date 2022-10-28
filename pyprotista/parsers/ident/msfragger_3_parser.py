@@ -102,7 +102,11 @@ class MSFragger_3_Parser(IdentBaseParser):
             name = map_dict[mass]
             if len(name) > 0:
                 for m in name:
-                    if any(["N-term" in p for p in self.mod_dict[m]["position"]]):
+                    pos = int(re.search(r"^\d+", mod).group(0))
+                    if (
+                        any(["N-term" in p for p in self.mod_dict[m]["position"]])
+                        and pos == 1
+                    ):
                         pos = 0
                     else:
                         pos = int(re.search(r"^\d+", mod).group(0))

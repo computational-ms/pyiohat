@@ -140,3 +140,53 @@ def test_map_mod_translation_msfragger3():
         row=["3M(15.994915)", "15M(15.994915)", "18C(57.021465)"], map_dict=map_dict
     )
     assert converted == "Oxidation:3;Oxidation:15;Carbamidomethyl:18;"
+
+
+def test_c_terminal_tmt():
+    input_file = pytest._test_path / "data" / "test_positions_msfragger.tsv"
+
+    parser = MSFragger_3_Parser(
+        input_file,
+        params={
+            "cpus": 2,
+            "enzyme": "(?<=[KR])(?![P])",
+            "terminal_cleavage_site_integrity": "any",
+            "validation_score_field": {"msfragger_3_0": "msfragger:hyperscore"},
+            "bigger_scores_better": {"msfragger_3_0": True},
+            "modifications": [
+                {
+                    "aa": "M",
+                    "type": "opt",
+                    "position": "any",
+                    "name": "Oxidation",
+                },
+                {
+                    "aa": "*",
+                    "type": "opt",
+                    "position": "Prot-N-term",
+                    "name": "Acetyl",
+                },
+                {
+                    "aa": "*",
+                    "type": "opt",
+                    "position": "N-term",
+                    "name": "TMT6plex",
+                },
+                {
+                    "aa": "C",
+                    "type": "fix",
+                    "position": "any",
+                    "name": "Carbamidomethyl",
+                },
+                {
+                    "aa": "K",
+                    "type": "fix",
+                    "position": "any",
+                    "name": "TMT6plex",
+                },
+            ],
+            "15N": False,
+        },
+    )
+    converted = parser.translate_mods()
+    assert converted[0] == "TMT6plex:0;TMT6plex:6"
