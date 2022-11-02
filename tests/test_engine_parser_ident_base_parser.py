@@ -18,11 +18,14 @@ def test_base_parser_read_rt_lookup_file():
 
     bp = IdentBaseParser(input_file, params={"rt_pickle_name": rt_lookup_path})
     rt_lookup = bp._read_meta_info_lookup_file()
-    assert (rt_lookup["rt_unit"] == 1).all()
-    assert pytest.approx(rt_lookup["precursor_mz"].mean()) == 550.8444810049874
+    assert len(rt_lookup) == 1120
+    precursor_mzs = [list(specs.values())[-1][-1] for specs in rt_lookup.values()]
+    assert pytest.approx(sum(precursor_mzs) / len(precursor_mzs)) == 550.8444810049874
     # check consistency
-    assert pytest.approx(rt_lookup.loc[2450, "precursor_mz"]) == 618.2697
-    assert pytest.approx(rt_lookup.loc[2450, "rt"]) == 1534.4619140625
+    assert 2450 in rt_lookup
+    assert 1534.4619140625 in rt_lookup[2450]
+    assert pytest.approx(rt_lookup[2450][1534.4619140625][0]) == "path/for/glory.mzML"
+    assert pytest.approx(rt_lookup[2450][1534.4619140625][1]) == 618.2697
 
 
 def test_engine_parsers_IdentBaseParser_init():
@@ -240,7 +243,7 @@ def test_get_exp_rt_and_mz():
     )
     assert np.allclose(
         obj.df["retention_time_seconds"],
-        [114735.00, 116583.52, 116805.30, 118033.46, 124967.99],
+        [1912.25, 1943.0586666666668, 1946.755, 1967.2243333333333, 2082.7998333333335],
         atol=1e-2,
     )
 
@@ -573,11 +576,11 @@ def test_groupby_rt_and_spec_id():
         is True
     )
     assert (
-        all(obj.df["retention_time_seconds"] == [114735.0096, 116583.5268, 116805.3012])
+        all(obj.df["retention_time_seconds"] == [1912.25016, 1943.05878, 1946.75502])
         is True
     )
     with pytest.raises(KeyError):
-        obj.df[0, "spectrum_id"] = 1234567
+        obj.df.loc[0, "spectrum_id"] = 1234567
         obj.get_meta_info()
 
 

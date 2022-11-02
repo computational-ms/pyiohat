@@ -286,18 +286,31 @@ class IdentBaseParser(BaseParser):
         """Read meta info lookup file.
 
         Returns:
-            rt_lookup (pd.DataFrame): loaded rt_pickle_file indexable by Spectrum ID
+            rt_lookup (dict of int: dict): dict with spectrum ids as top level key
+                                           values are new dicts with all rt values as keys
+                                           values are lists with [file, precursor_mz]
         """
         rt_lookup = pd.read_csv(self.params["rt_pickle_name"], compression="infer")
         rt_lookup["rt_unit"] = rt_lookup["rt_unit"].replace(
             {"second": 1, "minute": 60, "s": 1, "min": 60}
         )
+        rt_lookup["retention_time_seconds"] = (
+            rt_lookup[["rt", "rt_unit"]].astype(float).product(axis=1)
+        )
+        rt_lookup.drop(columns=["rt", "rt_unit"], inplace=True)
+
         rt_lookup.set_index(
             [
                 "spectrum_id",
-                rt_lookup["rt"].apply(trunc, args=(self.rt_truncate_precision,)),
+                "retention_time_seconds",
             ],
             inplace=True,
+        )
+        rt_lookup = rt_lookup.loc[:, ["file", "precursor_mz"]]
+        rt_lookup = (
+            rt_lookup.groupby(level=0)
+            .apply(lambda grp: grp.xs(grp.name).T.to_dict("list"))
+            .to_dict()
         )
         return rt_lookup
 
@@ -309,69 +322,47 @@ class IdentBaseParser(BaseParser):
         Operations are performed inplace on self.df
         """
         rt_lookup = self._read_meta_info_lookup_file()
-        spec_ids = self.df["spectrum_id"].astype(int)
-        logger.info(self.style)
+        self.df["spectrum_id"] = self.df["spectrum_id"].astype(int)
         if self.style in ("comet_style_1", "omssa_style_1"):
             logger.warning(
                 "This engine does not provide retention time information. Grouping only by Spectrum ID. This may cause problems when working with multi-file inputs."
             )
-            rt_lookup = rt_lookup.loc[pd.IndexSlice[spec_ids.unique(), :]].droplevel(
-                "rt"
-            )
-            spec_rt_idx = spec_ids
-        else:
-            spec_rt_idx = (
-                pd.concat(
-                    [
-                        spec_ids,
-                        self.df["retention_time_seconds"]
-                        .astype(float)
-                        .apply(trunc, args=(self.rt_truncate_precision,)),
-                    ],
-                    axis=1,
-                )
-                .apply(tuple, axis=1)
-                .to_list()
-            )
-        try:
-            self.df["retention_time_seconds"] = (
-                rt_lookup.loc[spec_rt_idx, ["rt", "rt_unit"]]
-                .astype(float)
-                .product(axis=1)
-                .to_list()
-            )
-        except KeyError:
-            logger.warning("PSMs could not be uniquely mapped to meta information.")
-            logger.info("Continuing with smallest delta retention times.")
-            missing_truncated_indices = set(
-                ind for ind in spec_rt_idx if ind not in rt_lookup.index
-            )
-            ind_mapping = {}
-            for ind in missing_truncated_indices:
-                meta_rt = rt_lookup.loc[ind[0], "rt"]
-                smallest_delta_idx = abs(meta_rt - ind[1]).idxmin()
-                if abs(
-                    round(
-                        meta_rt.loc[smallest_delta_idx] - ind[1],
-                        self.rt_truncate_precision,
-                    )
-                ) <= 10 ** (-self.rt_truncate_precision):
-                    ind_mapping[ind] = (ind[0], smallest_delta_idx)
+            for name, grp in self.df.groupby("spectrum_id"):
+                mappable_within_precision = list(rt_lookup[name].keys())
+                if len(mappable_within_precision) == 1:
+                    self.df.loc[
+                        grp.index,
+                        ("raw_data_location", "exp_mz", "retention_time_seconds"),
+                    ] = rt_lookup[name][mappable_within_precision[0]] + [
+                        mappable_within_precision[0]
+                    ]
                 else:
                     logger.error(
-                        f"No PSMs with (spectrum_id, retention_time) {ind} in meta information."
+                        f"Could not uniquely assign meta data to spectrum id {name}."
                     )
-                    raise KeyError
-            spec_rt_idx = [ind_mapping.get(ind, ind) for ind in spec_rt_idx]
-            self.df["retention_time_seconds"] = (
-                rt_lookup.loc[spec_rt_idx, ["rt", "rt_unit"]]
-                .astype(float)
-                .product(axis=1)
-                .to_list()
-            )
+        else:
+            self.df["retention_time_seconds"] = self.df[
+                "retention_time_seconds"
+            ].astype(float)
+            for name, grp in self.df.groupby(["spectrum_id", "retention_time_seconds"]):
+                meta_rts = rt_lookup[name[0]].keys()
+                mappable_within_precision = [
+                    rt
+                    for rt in meta_rts
+                    if abs(name[1] - rt) <= 10**-self.rt_truncate_precision
+                ]
+                if len(mappable_within_precision) == 1:
+                    self.df.loc[
+                        grp.index,
+                        ("raw_data_location", "exp_mz", "retention_time_seconds"),
+                    ] = rt_lookup[name[0]][mappable_within_precision[0]] + [
+                        mappable_within_precision[0]
+                    ]
+                else:
+                    logger.error(
+                        f"Could not uniquely assign meta data to spectrum id, retention time {name}."
+                    )
 
-        self.df["exp_mz"] = rt_lookup.loc[spec_rt_idx, "precursor_mz"].to_list()
-        self.df["raw_data_location"] = rt_lookup.loc[spec_rt_idx, "file"].to_list()
         self.df.loc[:, "spectrum_title"] = (
             self.df["raw_data_location"]
             + "."
