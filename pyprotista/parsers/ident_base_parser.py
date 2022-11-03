@@ -322,7 +322,7 @@ class IdentBaseParser(BaseParser):
         self.df["chemical_composition"] = chemical_compositions
         # Remove empties
         self.df["chemical_composition"] = self.df["chemical_composition"].str.replace(
-            r"\d*[A-Z][a-z]?\(0\)", ""
+            r"\d*[A-Z][a-z]?\(0\)", "", regex=True
         )
 
         isotope_mass_lookup = {}
