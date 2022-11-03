@@ -2,8 +2,10 @@
 import multiprocessing as mp
 
 import ahocorasick
+import numpy as np
 import pandas as pd
 import regex as re
+from chemical_composition import ChemicalComposition
 from chemical_composition.chemical_composition_kb import PROTON
 from loguru import logger
 from peptide_mapper.mapper import UPeptideMapper
@@ -11,11 +13,12 @@ from unimod_mapper.unimod_mapper import UnimodMapper
 
 from pyprotista.parsers.base_parser import BaseParser
 from pyprotista.parsers.misc import (
-    get_composition_and_mass_and_accuracy,
+    get_isotopologue_accuracy,
     init_custom_cc,
-    trunc,
 )
 from pyprotista.utils import merge_and_join_dicts
+
+mp.set_start_method(method="fork")
 
 
 class IdentBaseParser(BaseParser):
@@ -248,31 +251,117 @@ class IdentBaseParser(BaseParser):
         )
 
     def calc_masses_offsets_and_composition(self):
-        """Theoretical masses and mass-to-charge ratios are computed and added.
+        """Calculate chemical composition theoretical masses, and mass-to-charge ratios.
 
         Offsets are calculated between theoretical and experimental mass-to-charge ratio.
         Operations are performed inplace on self.df
         """
+        all_compositions = {}
+        iupac_aas = tuple("ACDEFGHIKLMNPQRSTUVWY")
+        cc = ChemicalComposition(
+            unimod_file_list=self.params.get("xml_file_list", None)
+        )
+        for aa in iupac_aas:
+            cc.use(sequence=aa)
+            all_compositions[aa] = cc.copy()
+        for mod in self.mod_dict.keys():
+            all_compositions[mod] = self.mod_mapper.name_to_composition(mod)[0]
+        elements = list(
+            set(element for comp in all_compositions.values() for element in comp)
+        )
+        # C and H first then the rest of the elements
+        elements = list(
+            sorted(
+                elements, key=lambda e: "00" if e == "C" else "01" if e == "H" else e
+            )
+        )
+        atom_counts = np.zeros(shape=(len(self.df), len(elements)), dtype=int)
+        sequences = self.df["sequence"].to_numpy(dtype=str)
+        modifications = self.df["modifications"].to_numpy(dtype=str)
+        for aa in iupac_aas:
+            ordered_element_multiplier = []
+            for element in elements:
+                ordered_element_multiplier += [all_compositions[aa].get(element, 0)]
+            ordered_element_multiplier = np.array(ordered_element_multiplier)
+            atom_counts += np.outer(
+                np.char.count(sequences, aa), ordered_element_multiplier
+            )
+        # Remove water (peptide bonds)
+        water = np.zeros(shape=(1, len(elements)), dtype=int)
+        water[0, elements.index("H")] = 2
+        water[0, elements.index("O")] = 1
+        atom_counts -= np.outer(np.maximum(np.char.str_len(sequences) - 1, 0), water)
+        for mod in self.mod_dict.keys():
+            ordered_element_multiplier = []
+            for element in elements:
+                ordered_element_multiplier += [all_compositions[mod].get(element, 0)]
+            ordered_element_multiplier = np.array(ordered_element_multiplier)
+            atom_counts += np.outer(
+                np.char.count(modifications, mod + ":"), ordered_element_multiplier
+            )
+        for i, element in enumerate(elements):
+            if i == 0:
+                chemical_compositions = np.char.add(
+                    elements[i] + "(", atom_counts.astype(str)[:, i]
+                )
+            else:
+                next_element_string = np.char.add(
+                    ")" + elements[i] + "(", atom_counts.astype(str)[:, i]
+                )
+                chemical_compositions = np.char.add(
+                    chemical_compositions, next_element_string
+                )
+            if i == len(elements) - 1:
+                chemical_compositions = np.char.add(chemical_compositions, ")")
+        self.df["chemical_composition"] = chemical_compositions
+        # Remove empties
+        self.df["chemical_composition"] = self.df["chemical_composition"].str.replace(
+            r"\d*[A-Z][a-z]?\(0\)", ""
+        )
+
+        isotope_mass_lookup = {}
+        for element, isotope_data in cc.isotopic_distributions.items():
+            if isinstance(isotope_data, dict):
+                # this has extra data
+                isotope_list = []
+                for fraction in isotope_data:
+                    isotope_list.extend(isotope_data[fraction])
+            else:
+                isotope_list = isotope_data
+
+            for iso_abund in isotope_list:
+                isotope_mass_key = f"{round(iso_abund[0])}{element}"
+                isotope_mass_lookup[isotope_mass_key] = iso_abund[0]
+
+        monoisotopic_element_masses = []
+        for element in elements:
+            try:
+                mass = max(cc.isotopic_distributions[element], key=lambda d: d[1])[0]
+            except KeyError:
+                # Element is an isotope
+                mass = isotope_mass_lookup[element]
+            monoisotopic_element_masses.extend([mass])
+        monoisotopic_element_masses = np.array(monoisotopic_element_masses)
+        self.df["ucalc_mass"] = (atom_counts * monoisotopic_element_masses).sum(axis=1)
+
         with mp.Pool(
             self.params.get("cpus", mp.cpu_count() - 1),
             initializer=init_custom_cc,
             initargs=(
-                get_composition_and_mass_and_accuracy,
-                self.params.get("xml_file_list", None),
+                get_isotopologue_accuracy,
                 self.PROTON,
             ),
         ) as pool:
-            comp = pool.starmap(
-                get_composition_and_mass_and_accuracy,
+            acc = pool.starmap(
+                get_isotopologue_accuracy,
                 zip(
-                    self.df["sequence"].values,
-                    self.df["modifications"].values,
+                    self.df["chemical_composition"].values,
                     self.df["charge"].astype(int).values,
                     self.df["exp_mz"].values,
                 ),
                 chunksize=1,
             )
-        self.df.loc[:, ["chemical_composition", "ucalc_mass", "accuracy_ppm"]] = comp
+        self.df.loc[:, "accuracy_ppm"] = acc
         self.df.loc[:, "ucalc_mz"] = self._calc_mz(
             mass=self.df["ucalc_mass"], charge=self.df["charge"]
         )
