@@ -127,13 +127,17 @@ def sort_mods(data):
     Returns:
         sorted_formatted_mods (str): String with sorted mods in style "Mod1:pos1;Modn:posn"
     """
-    data = set(data)
-    sort_pattern = r"([\w\-\(\)\>\:]+)(?:\:)(\d+)"
-    positions = [int(re.search(sort_pattern, d).group(2)) for d in data if d != ""]
-    names = [re.search(sort_pattern, d).group(1) for d in data if d != ""]
-    sorted_mods = sorted(zip(names, positions), key=lambda x: x[1])
-    sorted_mods_str = [[str(i) for i in m] for m in sorted_mods]
-    sorted_formatted_mods = ";".join([":".join(m) for m in sorted_mods_str])
+
+    def _sort_with_positional_priority(mod):
+        if mod == "":
+            return None
+        else:
+            name, _, pos = mod.rpartition(":")
+            return int(pos), name
+
+    sorted_formatted_mods = ";".join(
+        sorted(set(data), key=_sort_with_positional_priority)
+    )
     return sorted_formatted_mods
 
 
