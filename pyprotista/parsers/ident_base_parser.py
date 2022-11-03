@@ -6,7 +6,6 @@ import ahocorasick
 import numpy as np
 import pandas as pd
 import regex as re
-from chemical_composition import ChemicalComposition
 from chemical_composition.chemical_composition_kb import PROTON
 from loguru import logger
 from peptide_mapper.mapper import UPeptideMapper
@@ -265,12 +264,9 @@ class IdentBaseParser(BaseParser):
         """
         all_compositions = {}
         iupac_aas = tuple("ACDEFGHIKLMNPQRSTUVWY")
-        cc = ChemicalComposition(
-            unimod_file_list=self.params.get("xml_file_list", None)
-        )
         for aa in iupac_aas:
-            cc.use(sequence=aa)
-            all_compositions[aa] = cc.copy()
+            self.cc.use(sequence=aa)
+            all_compositions[aa] = self.cc.copy()
         for mod in self.mod_dict.keys():
             all_compositions[mod] = self.mod_mapper.name_to_composition(mod)[0]
         elements = list(
@@ -327,7 +323,7 @@ class IdentBaseParser(BaseParser):
         )
 
         isotope_mass_lookup = {}
-        for element, isotope_data in cc.isotopic_distributions.items():
+        for element, isotope_data in self.cc.isotopic_distributions.items():
             if isinstance(isotope_data, dict):
                 # this has extra data
                 isotope_list = []
@@ -343,7 +339,7 @@ class IdentBaseParser(BaseParser):
         monoisotopic_element_masses = []
         for element in elements:
             try:
-                mass = max(cc.isotopic_distributions[element], key=lambda d: d[1])[0]
+                mass = max(self.cc.isotopic_distributions[element], key=lambda d: d[1])[0]
             except KeyError:
                 # Element is an isotope
                 mass = isotope_mass_lookup[element]
@@ -366,7 +362,6 @@ class IdentBaseParser(BaseParser):
                     self.df["charge"].astype(int).values,
                     self.df["exp_mz"].values,
                 ),
-                chunksize=1,
             )
         self.df.loc[:, "accuracy_ppm"] = acc
         self.df.loc[:, "ucalc_mz"] = self._calc_mz(
@@ -406,9 +401,13 @@ class IdentBaseParser(BaseParser):
                 if row["rt_unit"] == "minute" or row["rt_unit"] == "min":
                     rt *= 60.0
                 rt_lookup[int(row["spectrum_id"])] = {}
+                if row["precursor_mz"] == "":
+                    precursor_mz = np.nan
+                else:
+                    precursor_mz = float(row["precursor_mz"])
                 rt_lookup[int(row["spectrum_id"])][rt] = [
                     row["file"],
-                    float(row["precursor_mz"]),
+                    precursor_mz,
                 ]
         return rt_lookup
 
