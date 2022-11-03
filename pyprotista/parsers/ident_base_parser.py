@@ -37,6 +37,12 @@ class IdentBaseParser(BaseParser):
         self.params["mapped_mods"] = self.mod_mapper.map_mods(
             mod_list=self.params.get("modifications", [])
         )
+        successfully_mapped_mods = set(
+            mod["name"] for mod in self.params["mapped_mods"]["fix"]
+        ) | set(mod["name"] for mod in self.params["mapped_mods"]["opt"])
+        self.non_mappable_mods = set(
+            mod["name"] for mod in self.params.get("modifications", [])
+        ).difference(successfully_mapped_mods)
         self.mod_dict = self._create_mod_dicts()
         self.rt_truncate_precision = 2
         self.reference_dict = {
@@ -370,6 +376,18 @@ class IdentBaseParser(BaseParser):
             / self.df["ucalc_mz"]
             * 1e6
         )
+        # Clear rows with non-mappable mods
+        for mod in self.non_mappable_mods:
+            self.df.loc[
+                self.df["modifications"].str.contains(mod),
+                (
+                    "chemical_composition",
+                    "ucalc_mass",
+                    "ucalc_mz",
+                    "accuracy_ppm",
+                    "accuracy_ppm_C12",
+                ),
+            ] = np.nan
 
     def _read_meta_info_lookup_file(self):
         """Read meta info lookup file.
