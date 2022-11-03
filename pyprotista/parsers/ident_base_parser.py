@@ -5,7 +5,6 @@ import multiprocessing as mp
 import ahocorasick
 import numpy as np
 import pandas as pd
-import regex as re
 from chemical_composition.chemical_composition_kb import PROTON
 from loguru import logger
 from peptide_mapper.mapper import UPeptideMapper
@@ -13,8 +12,10 @@ from unimod_mapper.unimod_mapper import UnimodMapper
 
 from pyprotista.parsers.base_parser import BaseParser
 from pyprotista.parsers.misc import (
+    get_compositions_and_monoisotopic_masses,
     get_isotopologue_accuracy,
     init_custom_cc,
+    sort_mods,
 )
 from pyprotista.utils import merge_and_join_dicts
 
@@ -32,6 +33,7 @@ class IdentBaseParser(BaseParser):
         super().__init__(*args, **kwargs)
         self.DELIMITER = self.params.get("delimiter", "<|>")
         self.PROTON = PROTON
+        self.IUPAC_AAS = tuple("ACDEFGHIKLMNPQRSTUVWY")
         self.df = None
         self.mod_mapper = UnimodMapper(xml_file_list=self.xml_file_list)
         self.params["mapped_mods"] = self.mod_mapper.map_mods(
@@ -125,25 +127,8 @@ class IdentBaseParser(BaseParser):
 
         # Ensure same order of modifications
         self.df.loc[:, "modifications"] = (
-            self.df["modifications"].fillna("").str.split(";").apply(self.sort_mods)
+            self.df["modifications"].fillna("").str.split(";").apply(sort_mods)
         )
-
-    def sort_mods(self, data):
-        """Sort mods based on position in peptide and ensures unique mod:pos pairs.
-
-        Args:
-            data (list): list of modifications with style "Mod:position"
-        Returns:
-            sorted_formatted_mods (str): String with sorted mods in style "Mod1:pos1;Modn:posn"
-        """
-        data = set(data)
-        sort_pattern = r"([\w\-\(\)\>\:]+)(?:\:)(\d+)"
-        positions = [int(re.search(sort_pattern, d).group(2)) for d in data if d != ""]
-        names = [re.search(sort_pattern, d).group(1) for d in data if d != ""]
-        sorted_mods = sorted(zip(names, positions), key=lambda x: x[1])
-        sorted_mods_str = [[str(i) for i in m] for m in sorted_mods]
-        sorted_formatted_mods = ";".join([":".join(m) for m in sorted_mods_str])
-        return sorted_formatted_mods
 
     def assert_only_iupac_and_missing_aas(self):
         """Assert that only IUPAC nomenclature one letter amino acids are used in sequence.
@@ -153,9 +138,8 @@ class IdentBaseParser(BaseParser):
         """
         self.df["sequence"] = self.df["sequence"].str.upper()
         # Added X for missing AAs
-        iupac_aas = set("ACDEFGHIKLMNPQRSTUVWY")
         iupac_conform_seqs = self.df["sequence"].apply(
-            lambda seq: set(seq).issubset(iupac_aas)
+            lambda seq: set(seq).issubset(self.IUPAC_AAS)
         )
         if any(~iupac_conform_seqs):
             self.df = self.df.loc[iupac_conform_seqs, :]
@@ -263,91 +247,20 @@ class IdentBaseParser(BaseParser):
         Operations are performed inplace on self.df
         """
         all_compositions = {}
-        iupac_aas = tuple("ACDEFGHIKLMNPQRSTUVWY")
-        for aa in iupac_aas:
+        for aa in self.IUPAC_AAS:
             self.cc.use(sequence=aa)
             all_compositions[aa] = self.cc.copy()
         for mod in self.mod_dict.keys():
             all_compositions[mod] = self.mod_mapper.name_to_composition(mod)[0]
-        elements = list(
-            set(element for comp in all_compositions.values() for element in comp)
-        )
-        # C and H first then the rest of the elements
-        elements = list(
-            sorted(
-                elements, key=lambda e: "00" if e == "C" else "01" if e == "H" else e
-            )
-        )
-        atom_counts = np.zeros(shape=(len(self.df), len(elements)), dtype=int)
-        sequences = self.df["sequence"].to_numpy(dtype=str)
-        modifications = self.df["modifications"].to_numpy(dtype=str)
-        for aa in iupac_aas:
-            ordered_element_multiplier = []
-            for element in elements:
-                ordered_element_multiplier += [all_compositions[aa].get(element, 0)]
-            ordered_element_multiplier = np.array(ordered_element_multiplier)
-            atom_counts += np.outer(
-                np.char.count(sequences, aa), ordered_element_multiplier
-            )
-        # Remove water (peptide bonds)
-        water = np.zeros(shape=(1, len(elements)), dtype=int)
-        water[0, elements.index("H")] = 2
-        water[0, elements.index("O")] = 1
-        atom_counts -= np.outer(np.maximum(np.char.str_len(sequences) - 1, 0), water)
-        for mod in self.mod_dict.keys():
-            ordered_element_multiplier = []
-            for element in elements:
-                ordered_element_multiplier += [all_compositions[mod].get(element, 0)]
-            ordered_element_multiplier = np.array(ordered_element_multiplier)
-            atom_counts += np.outer(
-                np.char.count(modifications, mod + ":"), ordered_element_multiplier
-            )
-        for i, element in enumerate(elements):
-            if i == 0:
-                chemical_compositions = np.char.add(
-                    elements[i] + "(", atom_counts.astype(str)[:, i]
-                )
-            else:
-                next_element_string = np.char.add(
-                    ")" + elements[i] + "(", atom_counts.astype(str)[:, i]
-                )
-                chemical_compositions = np.char.add(
-                    chemical_compositions, next_element_string
-                )
-            if i == len(elements) - 1:
-                chemical_compositions = np.char.add(chemical_compositions, ")")
-        self.df["chemical_composition"] = chemical_compositions
-        # Remove empties
-        self.df["chemical_composition"] = self.df["chemical_composition"].str.replace(
-            r"\d*[A-Z][a-z]?\(0\)", "", regex=True
-        )
 
-        isotope_mass_lookup = {}
-        for element, isotope_data in self.cc.isotopic_distributions.items():
-            if isinstance(isotope_data, dict):
-                # this has extra data
-                isotope_list = []
-                for fraction in isotope_data:
-                    isotope_list.extend(isotope_data[fraction])
-            else:
-                isotope_list = isotope_data
-
-            for iso_abund in isotope_list:
-                isotope_mass_key = f"{round(iso_abund[0])}{element}"
-                isotope_mass_lookup[isotope_mass_key] = iso_abund[0]
-
-        monoisotopic_element_masses = []
-        for element in elements:
-            try:
-                mass = max(self.cc.isotopic_distributions[element], key=lambda d: d[1])[
-                    0
-                ]
-            except KeyError:
-                # Element is an isotope
-                mass = isotope_mass_lookup[element]
-            monoisotopic_element_masses.extend([mass])
-        monoisotopic_element_masses = np.array(monoisotopic_element_masses)
-        self.df["ucalc_mass"] = (atom_counts * monoisotopic_element_masses).sum(axis=1)
+        compositions, mono_masses = get_compositions_and_monoisotopic_masses(
+            sequences=self.df["sequence"].to_numpy(dtype=str),
+            modifications=self.df["modifications"].to_numpy(dtype=str),
+            compositions=all_compositions,
+            isotopic_distributions=self.cc.isotopic_distributions,
+        )
+        self.df.loc[:, "chemical_composition"] = compositions
+        self.df.loc[:, "ucalc_mass"] = mono_masses
 
         with mp.Pool(
             self.params.get("cpus", mp.cpu_count() - 1),
