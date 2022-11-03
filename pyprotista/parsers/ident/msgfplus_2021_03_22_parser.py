@@ -1,84 +1,106 @@
 """Engine parser."""
-import multiprocessing as mp
-import sys
-from io import BytesIO
-
 import pandas as pd
 import regex as re
-from loguru import logger
-from lxml import etree
-from tqdm import tqdm
-
+import xml.etree.cElementTree as etree
 from pyprotista.parsers.ident_base_parser import IdentBaseParser
 
-
-def _mp_specs_init(func, reference_dict, mapping_dict):
-    func.reference_dict = reference_dict
-    func.mapping_dict = mapping_dict
+element_tag_prefix = "{http://psidev.info/psi/pi/mzIdentML/1.1}"
 
 
-def _get_single_spec_df(spectrum):
-    """Primary method for reading and storing information from a single spectrum.
-
-    Attributes:
-        reference_dict (dict): dict with reference columns to be filled in
-        mapping_dict (dict): mapping of engine level column names to ursgal unified column names
-
-    Args:
-        spectrum (xml Element): namespace of single spectrum with potentially multiple PSMs
-
-    Returns:
-        (pd.DataFrame): dataframe containing spectrum information
-
-    """
-    spectrum = etree.parse(BytesIO(spectrum))
+def _iterator_xml(xml_file, mapping_dict):
+    version = ""
+    stage = 0
+    cv_param_modifications = ""
+    sequence = {}
+    peptide_lookup = {}
+    spec_results = {}
+    spec_ident_items = []
     spec_records = []
-    spec_level_dict = _get_single_spec_df.reference_dict.copy()
-    spec_level_info = {
-        c.attrib["name"]: c.attrib["value"] for c in spectrum.findall(".//{*}cvParam")
-    }
-    spec_level_dict.update(
-        {
-            _get_single_spec_df.mapping_dict[k]: spec_level_info[k]
-            for k in _get_single_spec_df.mapping_dict
-            if k in spec_level_info
-        }
-    )
 
-    # Iterate children
-    for psm in spectrum.findall(".//{*}SpectrumIdentificationItem"):
-        psm_level_dict = spec_level_dict.copy()
+    for event, entry in etree.iterparse(xml_file):
+        entry_tag = entry.tag
 
-        psm_level_dict.update(
-            {
-                _get_single_spec_df.mapping_dict[k]: psm.attrib[k]
-                for k in _get_single_spec_df.mapping_dict
-                if k in psm.attrib
-            }
-        )
-        cv_param_info = {
-            c.attrib["name"]: c.attrib["value"] for c in psm.findall(".//{*}cvParam")
-        }
-        psm_level_dict.update(
-            {
-                _get_single_spec_df.mapping_dict[k]: cv_param_info[k]
-                for k in _get_single_spec_df.mapping_dict
-                if k in cv_param_info
-            }
-        )
-        user_param_info = {
-            c.attrib["name"]: c.attrib["value"] for c in psm.findall(".//{*}userParam")
-        }
-        psm_level_dict.update(
-            {
-                _get_single_spec_df.mapping_dict[k]: user_param_info[k]
-                for k in _get_single_spec_df.mapping_dict
-                if k in user_param_info
-            }
-        )
+        if entry_tag == (f"{element_tag_prefix}PeptideEvidence"):
+            stage = 0
+            continue
+            # Back to 0, so no cvParam gets written
 
-        spec_records.append(psm_level_dict)
-    return pd.DataFrame(spec_records)
+        elif stage == 1:
+            sequence, cv_param_modifications, peptide_lookup = _peptide_lookup(
+                entry, entry_tag, sequence, cv_param_modifications, peptide_lookup
+            )
+        elif stage == 2:
+            spec_results, spec_ident_items, spec_records = _spec_records(
+                entry,
+                entry_tag,
+                spec_results,
+                spec_ident_items,
+                spec_records,
+                mapping_dict,
+            )
+
+        elif entry_tag == (f"{element_tag_prefix}DBSequence"):
+            stage = 1
+            continue
+            # Short before peptide_lookup begins
+        elif entry_tag == (f"{element_tag_prefix}FragmentationTable"):
+            stage = 2
+            continue
+            # Short before spec_record begins
+
+        elif entry_tag == (f"{element_tag_prefix}AnalysisSoftware"):
+            version = "msgfplus_" + "_".join(
+                re.findall(r"([/d]*\d+)", entry.attrib["version"])
+            )
+
+        entry.clear()
+        if entry_tag == (f"{element_tag_prefix}SpectrumIdentificationList"):
+            return version, peptide_lookup, spec_records
+
+
+def _peptide_lookup(entry, entry_tag, sequence, cv_param_modifications, peptide_lookup):
+    if entry_tag == (f"{element_tag_prefix}PeptideSequence"):
+        sequence = {"sequence": entry.text}
+    elif entry_tag == (f"{element_tag_prefix}cvParam"):
+        if entry.attrib["name"] == "unknown modification":
+            cv_param_modifications += entry.attrib["value"] + ":"
+        else:
+            cv_param_modifications += entry.attrib["name"] + ":"
+    elif entry_tag == (f"{element_tag_prefix}Modification"):
+        cv_param_modifications += entry.attrib["location"] + ";"
+    elif entry_tag == (f"{element_tag_prefix}Peptide"):
+        peptide_lookup[entry.attrib["id"]] = {
+            "modifications": cv_param_modifications.rstrip(";")
+        }
+        peptide_lookup[entry.attrib["id"]].update(sequence)
+        cv_param_modifications = ""
+        sequence = ""
+    return sequence, cv_param_modifications, peptide_lookup
+
+
+def _spec_records(
+    entry, entry_tag, spec_results, spec_ident_items, spec_records, mapping_dict
+):
+    if entry_tag == (f"{element_tag_prefix}cvParam") or entry_tag == (
+        f"{element_tag_prefix}userParam"
+    ):
+        if entry.attrib["name"] in mapping_dict:
+            spec_results.update(
+                {mapping_dict[entry.attrib["name"]]: entry.attrib["value"]}
+            )
+    elif entry_tag == (f"{element_tag_prefix}SpectrumIdentificationItem"):
+        for i in list(entry.attrib):
+            if i in mapping_dict:
+                spec_results.update({mapping_dict[i]: entry.attrib[i]})
+        spec_ident_items.append(spec_results)
+        spec_results = {}
+    elif entry_tag == (f"{element_tag_prefix}SpectrumIdentificationResult"):
+        for i in spec_ident_items:
+            i.update(spec_results)
+            spec_records.append(i)
+        spec_results = {}
+        spec_ident_items = []
+    return spec_results, spec_ident_items, spec_records
 
 
 class MSGFPlus_2021_03_22_Parser(IdentBaseParser):
@@ -91,15 +113,6 @@ class MSGFPlus_2021_03_22_Parser(IdentBaseParser):
         """
         super().__init__(*args, **kwargs)
         self.style = "msgfplus_style_1"
-
-        tree = etree.parse(self.input_file)
-        self.root = tree.getroot()
-        self.reference_dict["search_engine"] = "msgfplus_" + "_".join(
-            re.findall(
-                r"([/d]*\d+)",
-                self.root.find(".//{*}AnalysisSoftware").attrib["version"],
-            )
-        )
         self.mapping_dict = {
             v: k
             for k, v in self.param_mapper.get_default_params(style=self.style)[
@@ -129,32 +142,6 @@ class MSGFPlus_2021_03_22_Parser(IdentBaseParser):
         contains_engine = "MS-GF+" in head
         return is_mzid and contains_engine
 
-    def _get_peptide_lookup(self):
-        """Replace internal tags to retrieve sequences and formatted modification strings.
-
-        Operations are performed inplace.
-        """
-        lookup = {}
-        for pep in self.root.findall(".//{*}Peptide"):
-            id = pep.attrib.get("id", "")
-            lookup[id] = {"modifications": []}
-            for child in pep.findall(".//{*}PeptideSequence"):
-                lookup[id]["sequence"] = child.text
-            for child in pep.findall(".//{*}Modification"):
-                mod_name = child.find(".//{*}cvParam").attrib["name"]
-                if mod_name == "unknown modification":
-                    try:
-                        mod_name = child.find(".//{*}cvParam").attrib["value"]
-                    except:
-                        raise Exception(
-                            "an unknown modification causes problems as its value is not even recorded"
-                        )
-                lookup[id]["modifications"].append(
-                    f"{mod_name}:{child.attrib['location']}"
-                )
-            lookup[id]["modifications"] = ";".join(lookup[id]["modifications"])
-        return lookup
-
     def unify(self):
         """
         Primary method to read and unify engine output.
@@ -162,27 +149,13 @@ class MSGFPlus_2021_03_22_Parser(IdentBaseParser):
         Returns:
             self.df (pd.DataFrame): unified dataframe
         """
-        peptide_lookup = self._get_peptide_lookup()
-        spec_idents = [
-            etree.tostring(e)
-            for e in self.root.findall(".//{*}SpectrumIdentificationResult")
-        ]
-        logger.remove()
-        logger.add(lambda msg: tqdm.write(msg, end=""))
-        with mp.Pool(
-            self.params.get("cpus", mp.cpu_count() - 1),
-            initializer=_mp_specs_init,
-            initargs=(_get_single_spec_df, self.reference_dict, self.mapping_dict),
-        ) as pool:
-            chunk_dfs = pool.map(
-                _get_single_spec_df,
-                tqdm(spec_idents),
-            )
-        logger.remove()
-        logger.add(sys.stdout)
-        self.df = pd.concat(chunk_dfs, axis=0, ignore_index=True)
+        version, peptide_lookup, spec_records = _iterator_xml(
+            self.input_file, self.mapping_dict
+        )
+        self.df = pd.DataFrame(spec_records)
         seq_mods = pd.DataFrame(self.df["sequence"].map(peptide_lookup).to_list())
         self.df.loc[:, seq_mods.columns] = seq_mods
+        self.df["search_engine"] = version
         self.process_unify_style()
 
         return self.df

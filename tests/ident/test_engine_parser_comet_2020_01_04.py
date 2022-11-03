@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 
-import pandas as pd
 import pytest
 from lxml import etree
 
 from pyprotista.parsers.ident.comet_2020_01_4_parser import (
     Comet_2020_01_4_Parser,
-    _get_single_spec_df,
+    _iterator_xml,
+    _spec_records,
+    _peptide_lookup,
+    _get_modifications,
 )
 
 
@@ -106,69 +108,150 @@ def test_engine_parsers_comet_check_dataframe_integrity():
     assert (df["raw_data_location"] == "path/for/glory.mzML").all()
 
 
-def test_get_single_spec_df_comet():
+def test_engine_parsers_comet_iterator_xml():
     input_file = pytest._test_path / "data" / "BSA1_comet_2020_01_4.mzid"
-    element = (
-        etree.parse(input_file)
-        .getroot()
-        .find(".//{*}SpectrumIdentificationList/{*}SpectrumIdentificationResult")
-    )
-    ref_dict = {
-        "exp_mz": None,
-        "calc_mz": None,
-        "spectrum_title": None,
-        "search_engine": "comet_2020_01_4",
-        "spectrum_id": None,
-        "modifications": None,
-        "retention_time_seconds": None,
-        "charge": None,
-        "comet:score": None,
-        "comet:deltacn": None,
-        "comet:xcorr": None,
-        "comet:evalue": None,
-        "sequence": None,
-        "comet:spec_evalue": None,
-        "comet:num_matched_ions": None,
-        "comet:num_unmatched_ions": None,
-    }
-    mapping_dict = {
-        "chargeState": "charge",
-        "Comet:spscore": "comet:score",
-        "Comet:deltacn": "comet:deltacn",
-        "Comet:xcorr": "comet:xcorr",
-        "Comet:expectation value": "comet:evalue",
-        "peptide_ref": "sequence",
-        "experimentalMassToCharge": "exp_mz",
-        "calculatedMassToCharge": "calc_mz",
-        "SpecEValue": "comet:spec_evalue",
-        "number of matched peaks": "comet:num_matched_ions",
-        "number of unmatched peaks": "comet:num_unmatched_ions",
-    }
-    _get_single_spec_df.reference_dict = ref_dict
-    _get_single_spec_df.mapping_dict = mapping_dict
-    result = _get_single_spec_df(etree.tostring(element))
+    obj = Comet_2020_01_4_Parser(input_file=None, params=None)
+    (
+        version,
+        peptide_lookup,
+        spec_records,
+        modification_mass_map,
+        fixed_mods,
+    ) = _iterator_xml(input_file, obj.mapping_dict)
 
-    assert isinstance(result, pd.DataFrame)
+    assert len(peptide_lookup) == 24
+    assert len(modification_mass_map) == 3
+    assert len(spec_records) == 60
+    assert modification_mass_map["57.021464"] == "Carbamidomethyl"
     assert (
-        result.values
-        == [
-            [
-                "358.174682",
-                "358.174575",
-                None,
-                "comet_2020_01_4",
-                "2458",
-                None,
-                None,
-                "3",
-                "5.9000",
-                "1.0000",
-                "0.2825",
-                "3.76E+01",
-                "SHCIAEVEK;",
-                None,
-                "3",
-                "29",
-            ]
+        peptide_lookup["EACFAVEGPK;10:42.010565;"]["modifications"][
+            "monoisotopicMassDelta"
         ]
-    ).all()
+        == "42.010565"
+    )
+    assert spec_records[0]["comet:e_value"] == "3.76E+01"
+
+
+def test_engine_parsers_comet_peptide_lookup():
+    peptide = etree.Element("Peptide", id="LRCASIQK;8:42.010565;")
+    peptide_sequence = etree.Element("PeptideSequence")
+    peptide_sequence.text = "LRCASIQK"
+    modification = etree.Element(
+        "Modification", location="0", monoisotopicMassDelta="42.010565"
+    )
+    results = [peptide_sequence, modification, peptide]
+
+    element_tag_prefix = "{http://psidev.info/psi/pi/mzIdentML/1.2}"
+
+    modifications = {}
+    sequence = {}
+    peptide_lookup = {}
+
+    for i in results:
+        entry = i
+        entry_tag = f"{element_tag_prefix}{i.tag}"
+        sequence, modifications, peptide_lookup = _peptide_lookup(
+            entry, entry_tag, sequence, modifications, peptide_lookup
+        )
+
+    assert len(peptide_lookup) == 1
+    assert peptide_lookup["LRCASIQK;8:42.010565;"]["modifications"] == {
+        "monoisotopicMassDelta": "42.010565",
+        "location": "0",
+    }
+    assert peptide_lookup["LRCASIQK;8:42.010565;"]["sequence"] == "LRCASIQK"
+    assert peptide_lookup == {
+        "LRCASIQK;8:42.010565;": {
+            "modifications": {"monoisotopicMassDelta": "42.010565", "location": "0"},
+            "sequence": "LRCASIQK",
+        }
+    }
+
+
+def test_engine_parsers_comet_spec_records():
+    cv_param = etree.Element(
+        "cvParam",
+        cvRef="MS",
+        accession="MS:1001121",
+        name="number of matched peaks",
+        value="3",
+    )
+    spectrum_identification_item = etree.Element(
+        "SpectrumIdentificationItem",
+        id="SII_0",
+        rank="0",
+        chargeState="3",
+        peptide_ref="SHCIAEVEK;",
+        experimentalMassToCharge="358.174682",
+        calculatedMassToCharge="358.174575",
+        passThreshold="true",
+    )
+    spectrum_identification_result = etree.Element(
+        "SpectrumIdentificationResult",
+        id="SIR_16",
+        spectrumID="scan=2458",
+        spectraData_ref="SD0",
+    )
+    results = [cv_param, spectrum_identification_item, spectrum_identification_result]
+    obj = Comet_2020_01_4_Parser(input_file=None, params=None)
+
+    element_tag_prefix = "{http://psidev.info/psi/pi/mzIdentML/1.2}"
+
+    spec_results = {}
+    spec_ident_items = []
+    spec_records = []
+
+    for i in results:
+        entry = i
+        entry_tag = f"{element_tag_prefix}{i.tag}"
+        spec_results, spec_ident_items, spec_records = _spec_records(
+            entry,
+            entry_tag,
+            spec_results,
+            spec_ident_items,
+            spec_records,
+            obj.mapping_dict,
+        )
+    assert spec_records == [
+        {
+            "comet:num_matched_ions": "3",
+            "charge": "3",
+            "sequence": "SHCIAEVEK;",
+            "exp_mz": "358.174682",
+            "calc_mz": "358.174575",
+            "spectrum_id": "2458",
+        }
+    ]
+    assert len(spec_records[0]) == 6
+    assert spec_records[0]["comet:num_matched_ions"] == "3"
+    assert spec_records[0]["charge"] == "3"
+    assert spec_records[0]["sequence"] == "SHCIAEVEK;"
+    assert spec_records[0]["exp_mz"] == "358.174682"
+    assert spec_records[0]["calc_mz"] == "358.174575"
+    assert spec_records[0]["spectrum_id"] == "2458"
+
+
+def test_engine_parsers_comet_get_modifications():
+    cv_param = etree.Element(
+        "cvParam", cvRef="UNIMOD", accession="UNIMOD:UNIMOD:4", name="Carbamidomethyl"
+    )
+    search_modification = etree.Element(
+        "SearchModification", residues="C", massDelta="57.021464", fixedMod="true"
+    )
+    results = [cv_param, search_modification]
+    element_tag_prefix = "{http://psidev.info/psi/pi/mzIdentML/1.2}"
+
+    modification_mass_map = {}
+    mod_name = ""
+    fixed_mods = {}
+
+    for i in results:
+        entry = i
+        entry_tag = f"{element_tag_prefix}{i.tag}"
+        modification_mass_map, mod_name, fixed_mods = _get_modifications(
+            entry, entry_tag, modification_mass_map, mod_name, fixed_mods
+        )
+
+    assert fixed_mods == {"C": "Carbamidomethyl"}
+    assert mod_name == "Carbamidomethyl"
+    assert modification_mass_map == {"57.021464": "Carbamidomethyl"}

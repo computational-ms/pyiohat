@@ -1,11 +1,13 @@
 #!/usr/bin/env python
-import pandas as pd
+
 import pytest
 from lxml import etree
 
 from pyprotista.parsers.ident.msgfplus_2021_03_22_parser import (
     MSGFPlus_2021_03_22_Parser,
-    _get_single_spec_df,
+    _iterator_xml,
+    _peptide_lookup,
+    _spec_records,
 )
 
 
@@ -110,106 +112,36 @@ def test_engine_parsers_msgfplus_check_dataframe_integrity():
 
 
 def test_engine_parsers_msgfplus_get_peptide_lookup():
-    input_file = pytest._test_path / "data" / "BSA1_msgfplus_2021_03_22.mzid"
 
-    parser = MSGFPlus_2021_03_22_Parser(
-        input_file,
-        params={
-            "cpus": 2,
-            "enzyme": "(?<=[KR])(?![P])",
-            "terminal_cleavage_site_integrity": "any",
-            "validation_score_field": {"msgfplus_2021_03_22": "ms-gf:spec_evalue"},
-            "bigger_scores_better": {"msgfplus_2021_03_22": False},
-            "modifications": [
-                {
-                    "aa": "M",
-                    "type": "opt",
-                    "position": "any",
-                    "name": "Oxidation",
-                },
-                {
-                    "aa": "C",
-                    "type": "fix",
-                    "position": "any",
-                    "name": "Carbamidomethyl",
-                },
-                {
-                    "aa": "*",
-                    "type": "opt",
-                    "position": "Prot-N-term",
-                    "name": "Acetyl",
-                },
-            ],
-        },
+    cv_param = etree.Element(
+        "cvParam", cvRef="UNIMOD", accession="UNIMOD:4", name="Carbamidomethyl"
     )
-    lookup = parser._get_peptide_lookup()
-    assert len(lookup) == 24
-    assert "Pep_YICDNQDTISSK" in lookup.keys()
-    assert lookup["Pep_YICDNQDTISSK"]["sequence"] == "YICDNQDTISSK"
-    assert lookup["Pep_YICDNQDTISSK"]["modifications"] == "Carbamidomethyl:3"
-
-
-def test_get_single_spec_df_msgf():
-    input_file = pytest._test_path / "data" / "BSA1_msgfplus_2021_03_22.mzid"
-    element = (
-        etree.parse(input_file).getroot().find(".//{*}SpectrumIdentificationResult")
+    modification = etree.Element(
+        "Modification", location="6", monoisotopicMassDelta="57.021464"
     )
-    ref_dict = {
-        "exp_mz": None,
-        "calc_mz": None,
-        "spectrum_title": None,
-        "search_engine": "msgfplus_2021_03_22",
-        "spectrum_id": None,
-        "modifications": None,
-        "retention time_seconds": None,
-        "charge": None,
-        "ms-gf:denovoscore": None,
-        "ms-gf:evalue": None,
-        "ms-gf:raw_score": None,
-        "sequence": None,
-        "ms-gf:spec_evalue": None,
-        "ms-gf:num_matched_ions": None,
-    }
-    mapping_dict = {
-        "chargeState": "charge",
-        "MS-GF:DeNovoScore": "ms-gf:denovoscore",
-        "MS-GF:EValue": "ms-gf:evalue",
-        "MS-GF:RawScore": "ms-gf:rawscore",
-        "peptide_ref": "sequence",
-        "experimentalMassToCharge": "exp_mz",
-        "calculatedMassToCharge": "calc_mz",
-        "scan number(s)": "spectrum_id",
-        "MS-GF:SpecEValue": "ms-gf:spec_evalue",
-        "spectrum title": "spectrum_title",
-        "NumMatchedMainIons": "ms-gf:num_matched_ions",
-    }
-    _get_single_spec_df.reference_dict = ref_dict
-    _get_single_spec_df.mapping_dict = mapping_dict
-    result = _get_single_spec_df(etree.tostring(element))
+    peptide_sequence = etree.Element("PeptideSequence")
+    peptide_sequence.text = "DDPHACYSTVFDK"
+    peptide = etree.Element("Peptide", id="Pep_DDPHACYSTVFDK")
 
-    assert isinstance(result, pd.DataFrame)
-    assert (
-        result.values
-        == [
-            [
-                "722.3272094726562",
-                "722.3246459960938",
-                "glory.2791.2791.2",
-                "msgfplus_2021_03_22",
-                "2791",
-                None,
-                None,
-                "2",
-                "40",
-                "2.6986221E-12",
-                None,
-                "Pep_YICDNQDTISSK",
-                "4.4458354E-15",
-                "3",
-                "40",
-            ]
-        ]
-    ).all()
+    results = [cv_param, modification, peptide_sequence, peptide]
+
+    element_tag_prefix = "{http://psidev.info/psi/pi/mzIdentML/1.1}"
+
+    cv_param_modifications = ""
+    sequence = {}
+    peptide_lookup = {}
+
+    for i in results:
+        entry = i
+        entry_tag = f"{element_tag_prefix}{i.tag}"
+        sequence, cv_param_modifications, peptide_lookup = _peptide_lookup(
+            entry, entry_tag, sequence, cv_param_modifications, peptide_lookup
+        )
+
+    assert len(peptide_lookup) == 1
+    assert peptide_lookup["Pep_DDPHACYSTVFDK"]["modifications"] == "Carbamidomethyl:6"
+    assert peptide_lookup["Pep_DDPHACYSTVFDK"]["sequence"] == "DDPHACYSTVFDK"
+    assert cv_param_modifications == ""
 
 
 def test_engine_parsers_msgfplus_check_dataframe_integrity_unknown_mod():
@@ -258,7 +190,7 @@ def test_engine_parsers_msgfplus_check_dataframe_integrity_unknown_mod():
         },
     )
     df = parser.unify()
-    assert pytest.approx(df["exp_mz"].mean()) == 488.0319
+
     assert len(df) == 92
     # Currently this excludes two peptides and is reduced
     assert pytest.approx(df["ucalc_mz"].mean()) == 486.56
@@ -274,3 +206,77 @@ def test_engine_parsers_msgfplus_check_dataframe_integrity_unknown_mod():
         == df[df["sequence"] != "EACFAVEGPK"]["sequence"].str.count("C")
     ).all()
     assert df["modifications"].str.count(":").sum() == 71
+
+
+def test_engine_parsers_msgfplus_get_spec_records():
+    cv_param = etree.Element(
+        "cvParam",
+        cvRef="PSI-MS",
+        accession="MS:1002049",
+        name="MS-GF:RawScore",
+        value="40",
+    )
+    user_param = etree.Element("userParam", name="NumMatchedMainIons", value="3")
+    spectrum_identification_item = etree.Element(
+        "SpectrumIdentificationItem",
+        chargeState="2",
+        experimentalMassToCharge="722.3272094726562",
+        calculatedMassToCharge="722.3246459960938",
+        peptide_ref="Pep_YICDNQDTISSK",
+        rank="1",
+        passThreshold="true",
+        id="SII_350_1",
+    )
+    spectrum_identification_result = etree.Element(
+        "SpectrumIdentificationResult",
+        spectrumID="index=349",
+        spectraData_ref="SID_1",
+        id="SIR_350",
+    )
+
+    results = [
+        cv_param,
+        user_param,
+        spectrum_identification_item,
+        spectrum_identification_result,
+    ]
+
+    element_tag_prefix = "{http://psidev.info/psi/pi/mzIdentML/1.1}"
+    obj = MSGFPlus_2021_03_22_Parser(input_file=None, params=None)
+    spec_results = {}
+    spec_ident_items = []
+    spec_records = []
+
+    for i in results:
+        entry = i
+        entry_tag = f"{element_tag_prefix}{i.tag}"
+        spec_results, spec_ident_items, spec_records = _spec_records(
+            entry,
+            entry_tag,
+            spec_results,
+            spec_ident_items,
+            spec_records,
+            obj.mapping_dict,
+        )
+
+    assert len(spec_records) == 1
+    assert len(spec_records[0]) == 6
+    assert len(spec_ident_items) == 0
+    assert spec_records[0]["exp_mz"] == "722.3272094726562"
+
+
+def test_engine_parsers_msgfplus_iterator_xml():
+    input_file = pytest._test_path / "data" / "BSA1_msgfplus_2021_03_22.mzid"
+    obj = MSGFPlus_2021_03_22_Parser(input_file=None, params=None)
+
+    version, peptide_lookup, spec_records = _iterator_xml(input_file, obj.mapping_dict)
+
+    assert version == "msgfplus_2021_03_22"
+    assert len(spec_records) == 92
+    assert len(peptide_lookup) == 24
+    assert spec_records[3]["ms-gf:evalue"] == "1.6910947E-9"
+    assert spec_records[3]["retention_time_seconds"] == "1793.826"
+    assert (
+        peptide_lookup["Pep_CCTESLVNR"]["modifications"]
+        == "Carbamidomethyl:1;Carbamidomethyl:2"
+    )
