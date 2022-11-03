@@ -1,4 +1,5 @@
 """Ident base parser class."""
+import csv
 import multiprocessing as mp
 
 import ahocorasick
@@ -397,28 +398,18 @@ class IdentBaseParser(BaseParser):
                                            values are new dicts with all rt values as keys
                                            values are lists with [file, precursor_mz]
         """
-        rt_lookup = pd.read_csv(self.params["rt_pickle_name"], compression="infer")
-        rt_lookup["rt_unit"] = rt_lookup["rt_unit"].replace(
-            {"second": 1, "minute": 60, "s": 1, "min": 60}
-        )
-        rt_lookup["retention_time_seconds"] = (
-            rt_lookup[["rt", "rt_unit"]].astype(float).product(axis=1)
-        )
-        rt_lookup.drop(columns=["rt", "rt_unit"], inplace=True)
-
-        rt_lookup.set_index(
-            [
-                "spectrum_id",
-                "retention_time_seconds",
-            ],
-            inplace=True,
-        )
-        rt_lookup = rt_lookup.loc[:, ["file", "precursor_mz"]]
-        rt_lookup = (
-            rt_lookup.groupby(level=0)
-            .apply(lambda grp: grp.xs(grp.name).T.to_dict("list"))
-            .to_dict()
-        )
+        rt_lookup = {}
+        with open(self.params["rt_pickle_name"], mode="r") as meta_csv:
+            meta_reader = csv.DictReader(meta_csv)
+            for row in meta_reader:
+                rt = float(row["rt"])
+                if row["rt_unit"] == "minute" or row["rt_unit"] == "min":
+                    rt *= 60.0
+                rt_lookup[int(row["spectrum_id"])] = {}
+                rt_lookup[int(row["spectrum_id"])][rt] = [
+                    row["file"],
+                    float(row["precursor_mz"]),
+                ]
         return rt_lookup
 
     def get_meta_info(self):
