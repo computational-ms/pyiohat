@@ -339,7 +339,9 @@ class IdentBaseParser(BaseParser):
         monoisotopic_element_masses = []
         for element in elements:
             try:
-                mass = max(self.cc.isotopic_distributions[element], key=lambda d: d[1])[0]
+                mass = max(self.cc.isotopic_distributions[element], key=lambda d: d[1])[
+                    0
+                ]
             except KeyError:
                 # Element is an isotope
                 mass = isotope_mass_lookup[element]
