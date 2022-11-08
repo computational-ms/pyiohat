@@ -1,9 +1,10 @@
 """Ident base parser class."""
+import csv
 import multiprocessing as mp
 
 import ahocorasick
+import numpy as np
 import pandas as pd
-import regex as re
 from chemical_composition.chemical_composition_kb import PROTON
 from loguru import logger
 from peptide_mapper.mapper import UPeptideMapper
@@ -11,11 +12,14 @@ from unimod_mapper.unimod_mapper import UnimodMapper
 
 from pyprotista.parsers.base_parser import BaseParser
 from pyprotista.parsers.misc import (
-    get_composition_and_mass_and_accuracy,
+    get_compositions_and_monoisotopic_masses,
+    get_isotopologue_accuracy,
     init_custom_cc,
-    trunc,
+    sort_mods,
 )
 from pyprotista.utils import merge_and_join_dicts
+
+mp.set_start_method(method="fork")
 
 
 class IdentBaseParser(BaseParser):
@@ -29,11 +33,18 @@ class IdentBaseParser(BaseParser):
         super().__init__(*args, **kwargs)
         self.DELIMITER = self.params.get("delimiter", "<|>")
         self.PROTON = PROTON
+        self.IUPAC_AAS = tuple("ACDEFGHIKLMNPQRSTUVWY")
         self.df = None
         self.mod_mapper = UnimodMapper(xml_file_list=self.xml_file_list)
         self.params["mapped_mods"] = self.mod_mapper.map_mods(
             mod_list=self.params.get("modifications", [])
         )
+        successfully_mapped_mods = set(
+            mod["name"] for mod in self.params["mapped_mods"]["fix"]
+        ) | set(mod["name"] for mod in self.params["mapped_mods"]["opt"])
+        self.non_mappable_mods = set(
+            mod["name"] for mod in self.params.get("modifications", [])
+        ).difference(successfully_mapped_mods)
         self.mod_dict = self._create_mod_dicts()
         self.rt_truncate_precision = 2
         self.reference_dict = {
@@ -103,38 +114,15 @@ class IdentBaseParser(BaseParser):
         Modifications are sorted by position and leading, repeated or trailing delimiters are removed
         Operations are performed inplace on self.df
         """
-        # Remove any trailing or leading delimiters or only-delimiter modstrings
+        # Remove any trailing, leading, repeated, or only delimiters modstrings
         self.df.loc[:, "modifications"] = self.df.loc[:, "modifications"].str.replace(
-            r"^;+(?=\w)", "", regex=True
-        )
-        self.df.loc[:, "modifications"] = self.df.loc[:, "modifications"].str.replace(
-            r"(?<=\w);+$", "", regex=True
-        )
-        self.df.loc[:, "modifications"] = self.df.loc[:, "modifications"].str.replace(
-            r"^;+$", "", regex=True
+            r"^;+(?=\w)|(?<=\w);+$|^;+$|;+(?=;)", "", regex=True
         )
 
         # Ensure same order of modifications
         self.df.loc[:, "modifications"] = (
-            self.df["modifications"].fillna("").str.split(";").apply(self.sort_mods)
+            self.df["modifications"].fillna("").str.split(";").apply(sort_mods)
         )
-
-    def sort_mods(self, data):
-        """Sort mods based on position in peptide and ensures unique mod:pos pairs.
-
-        Args:
-            data (list): list of modifications with style "Mod:position"
-        Returns:
-            sorted_formatted_mods (str): String with sorted mods in style "Mod1:pos1;Modn:posn"
-        """
-        data = set(data)
-        sort_pattern = r"([\w\-\(\)\>\:]+)(?:\:)(\d+)"
-        positions = [int(re.search(sort_pattern, d).group(2)) for d in data if d != ""]
-        names = [re.search(sort_pattern, d).group(1) for d in data if d != ""]
-        sorted_mods = sorted(zip(names, positions), key=lambda x: x[1])
-        sorted_mods_str = [[str(i) for i in m] for m in sorted_mods]
-        sorted_formatted_mods = ";".join([":".join(m) for m in sorted_mods_str])
-        return sorted_formatted_mods
 
     def assert_only_iupac_and_missing_aas(self):
         """Assert that only IUPAC nomenclature one letter amino acids are used in sequence.
@@ -144,9 +132,8 @@ class IdentBaseParser(BaseParser):
         """
         self.df["sequence"] = self.df["sequence"].str.upper()
         # Added X for missing AAs
-        iupac_aas = set("ACDEFGHIKLMNPQRSTUVWY")
         iupac_conform_seqs = self.df["sequence"].apply(
-            lambda seq: set(seq).issubset(iupac_aas)
+            lambda seq: set(seq).issubset(self.IUPAC_AAS)
         )
         if any(~iupac_conform_seqs):
             self.df = self.df.loc[iupac_conform_seqs, :]
@@ -248,31 +235,44 @@ class IdentBaseParser(BaseParser):
         )
 
     def calc_masses_offsets_and_composition(self):
-        """Theoretical masses and mass-to-charge ratios are computed and added.
+        """Calculate chemical composition theoretical masses, and mass-to-charge ratios.
 
         Offsets are calculated between theoretical and experimental mass-to-charge ratio.
         Operations are performed inplace on self.df
         """
+        all_compositions = {}
+        for aa in self.IUPAC_AAS:
+            self.cc.use(sequence=aa)
+            all_compositions[aa] = self.cc.copy()
+        for mod in self.mod_dict.keys():
+            all_compositions[mod] = self.mod_mapper.name_to_composition(mod)[0]
+
+        compositions, mono_masses = get_compositions_and_monoisotopic_masses(
+            sequences=self.df["sequence"].to_numpy(dtype=str),
+            modifications=self.df["modifications"].to_numpy(dtype=str),
+            compositions=all_compositions,
+            isotopic_distributions=self.cc.isotopic_distributions,
+        )
+        self.df.loc[:, "chemical_composition"] = compositions
+        self.df.loc[:, "ucalc_mass"] = mono_masses
+
         with mp.Pool(
             self.params.get("cpus", mp.cpu_count() - 1),
             initializer=init_custom_cc,
             initargs=(
-                get_composition_and_mass_and_accuracy,
-                self.params.get("xml_file_list", None),
+                get_isotopologue_accuracy,
                 self.PROTON,
             ),
         ) as pool:
-            comp = pool.starmap(
-                get_composition_and_mass_and_accuracy,
+            acc = pool.starmap(
+                get_isotopologue_accuracy,
                 zip(
-                    self.df["sequence"].values,
-                    self.df["modifications"].values,
+                    self.df["chemical_composition"].values,
                     self.df["charge"].astype(int).values,
                     self.df["exp_mz"].values,
                 ),
-                chunksize=1,
             )
-        self.df.loc[:, ["chemical_composition", "ucalc_mass", "accuracy_ppm"]] = comp
+        self.df.loc[:, "accuracy_ppm"] = acc
         self.df.loc[:, "ucalc_mz"] = self._calc_mz(
             mass=self.df["ucalc_mass"], charge=self.df["charge"]
         )
@@ -281,24 +281,43 @@ class IdentBaseParser(BaseParser):
             / self.df["ucalc_mz"]
             * 1e6
         )
+        # Clear rows with non-mappable mods
+        for mod in self.non_mappable_mods:
+            self.df.loc[
+                self.df["modifications"].str.contains(mod),
+                (
+                    "chemical_composition",
+                    "ucalc_mass",
+                    "ucalc_mz",
+                    "accuracy_ppm",
+                    "accuracy_ppm_C12",
+                ),
+            ] = np.nan
 
     def _read_meta_info_lookup_file(self):
         """Read meta info lookup file.
 
         Returns:
-            rt_lookup (pd.DataFrame): loaded rt_pickle_file indexable by Spectrum ID
+            rt_lookup (dict of int: dict): dict with spectrum ids as top level key
+                                           values are new dicts with all rt values as keys
+                                           values are lists with [file, precursor_mz]
         """
-        rt_lookup = pd.read_csv(self.params["rt_pickle_name"], compression="infer")
-        rt_lookup["rt_unit"] = rt_lookup["rt_unit"].replace(
-            {"second": 1, "minute": 60, "s": 1, "min": 60}
-        )
-        rt_lookup.set_index(
-            [
-                "spectrum_id",
-                rt_lookup["rt"].apply(trunc, args=(self.rt_truncate_precision,)),
-            ],
-            inplace=True,
-        )
+        rt_lookup = {}
+        with open(self.params["rt_pickle_name"], mode="r") as meta_csv:
+            meta_reader = csv.DictReader(meta_csv)
+            for row in meta_reader:
+                rt = float(row["rt"])
+                if row["rt_unit"] == "minute" or row["rt_unit"] == "min":
+                    rt *= 60.0
+                rt_lookup[int(row["spectrum_id"])] = {}
+                if row["precursor_mz"] == "":
+                    precursor_mz = np.nan
+                else:
+                    precursor_mz = float(row["precursor_mz"])
+                rt_lookup[int(row["spectrum_id"])][rt] = [
+                    row["file"],
+                    precursor_mz,
+                ]
         return rt_lookup
 
     def get_meta_info(self):
@@ -309,69 +328,47 @@ class IdentBaseParser(BaseParser):
         Operations are performed inplace on self.df
         """
         rt_lookup = self._read_meta_info_lookup_file()
-        spec_ids = self.df["spectrum_id"].astype(int)
-        logger.info(self.style)
+        self.df["spectrum_id"] = self.df["spectrum_id"].astype(int)
         if self.style in ("comet_style_1", "omssa_style_1"):
             logger.warning(
                 "This engine does not provide retention time information. Grouping only by Spectrum ID. This may cause problems when working with multi-file inputs."
             )
-            rt_lookup = rt_lookup.loc[pd.IndexSlice[spec_ids.unique(), :]].droplevel(
-                "rt"
-            )
-            spec_rt_idx = spec_ids
-        else:
-            spec_rt_idx = (
-                pd.concat(
-                    [
-                        spec_ids,
-                        self.df["retention_time_seconds"]
-                        .astype(float)
-                        .apply(trunc, args=(self.rt_truncate_precision,)),
-                    ],
-                    axis=1,
-                )
-                .apply(tuple, axis=1)
-                .to_list()
-            )
-        try:
-            self.df["retention_time_seconds"] = (
-                rt_lookup.loc[spec_rt_idx, ["rt", "rt_unit"]]
-                .astype(float)
-                .product(axis=1)
-                .to_list()
-            )
-        except KeyError:
-            logger.warning("PSMs could not be uniquely mapped to meta information.")
-            logger.info("Continuing with smallest delta retention times.")
-            missing_truncated_indices = set(
-                ind for ind in spec_rt_idx if ind not in rt_lookup.index
-            )
-            ind_mapping = {}
-            for ind in missing_truncated_indices:
-                meta_rt = rt_lookup.loc[ind[0], "rt"]
-                smallest_delta_idx = abs(meta_rt - ind[1]).idxmin()
-                if abs(
-                    round(
-                        meta_rt.loc[smallest_delta_idx] - ind[1],
-                        self.rt_truncate_precision,
-                    )
-                ) <= 10 ** (-self.rt_truncate_precision):
-                    ind_mapping[ind] = (ind[0], smallest_delta_idx)
+            for name, grp in self.df.groupby("spectrum_id"):
+                mappable_within_precision = list(rt_lookup[name].keys())
+                if len(mappable_within_precision) == 1:
+                    self.df.loc[
+                        grp.index,
+                        ("raw_data_location", "exp_mz", "retention_time_seconds"),
+                    ] = rt_lookup[name][mappable_within_precision[0]] + [
+                        mappable_within_precision[0]
+                    ]
                 else:
                     logger.error(
-                        f"No PSMs with (spectrum_id, retention_time) {ind} in meta information."
+                        f"Could not uniquely assign meta data to spectrum id {name}."
                     )
-                    raise KeyError
-            spec_rt_idx = [ind_mapping.get(ind, ind) for ind in spec_rt_idx]
-            self.df["retention_time_seconds"] = (
-                rt_lookup.loc[spec_rt_idx, ["rt", "rt_unit"]]
-                .astype(float)
-                .product(axis=1)
-                .to_list()
-            )
+        else:
+            self.df["retention_time_seconds"] = self.df[
+                "retention_time_seconds"
+            ].astype(float)
+            for name, grp in self.df.groupby(["spectrum_id", "retention_time_seconds"]):
+                meta_rts = rt_lookup[name[0]].keys()
+                mappable_within_precision = [
+                    rt
+                    for rt in meta_rts
+                    if abs(name[1] - rt) <= 10**-self.rt_truncate_precision
+                ]
+                if len(mappable_within_precision) == 1:
+                    self.df.loc[
+                        grp.index,
+                        ("raw_data_location", "exp_mz", "retention_time_seconds"),
+                    ] = rt_lookup[name[0]][mappable_within_precision[0]] + [
+                        mappable_within_precision[0]
+                    ]
+                else:
+                    logger.error(
+                        f"Could not uniquely assign meta data to spectrum id, retention time {name}."
+                    )
 
-        self.df["exp_mz"] = rt_lookup.loc[spec_rt_idx, "precursor_mz"].to_list()
-        self.df["raw_data_location"] = rt_lookup.loc[spec_rt_idx, "file"].to_list()
         self.df.loc[:, "spectrum_title"] = (
             self.df["raw_data_location"]
             + "."

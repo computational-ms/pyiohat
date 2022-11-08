@@ -1,7 +1,5 @@
 """Quant base parser class."""
 
-from chemical_composition import ChemicalComposition
-
 from pyprotista.parsers.base_parser import BaseParser
 
 
@@ -14,7 +12,6 @@ class QuantBaseParser(BaseParser):
         Reads in data file and provides mappings.
         """
         super().__init__(*args, **kwargs)
-        self.cc = ChemicalComposition()
         self.required_headers = self._load_model("quant_parser_model.json")
 
     def process_unify_style(self):
