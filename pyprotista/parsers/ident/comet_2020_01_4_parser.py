@@ -14,7 +14,7 @@ def _iterator_xml(xml_file, mapping_dict):
     version = ""
     stage = 0
 
-    modifications = {}
+    modifications = []
     sequence = {}
     peptide_lookup = {}
 
@@ -31,7 +31,6 @@ def _iterator_xml(xml_file, mapping_dict):
 
         if entry_tag == (f"{element_tag_prefix}PeptideEvidence"):
             stage = 0
-            continue
             # Back to 0, so no cvParam gets written
         elif entry_tag == (f"{element_tag_prefix}ModificationParams"):
             stage = 0
@@ -58,14 +57,11 @@ def _iterator_xml(xml_file, mapping_dict):
 
         elif entry_tag == (f"{element_tag_prefix}DBSequence"):
             stage = 1
-            continue
             # Short before peptide_lookup begins
         elif entry_tag == (f"{element_tag_prefix}AdditionalSearchParams"):
             stage = 2
-            continue
         elif entry_tag == (f"{element_tag_prefix}Inputs"):
             stage = 3
-            continue
             # Short before spec_record begins
 
         elif entry_tag == (f"{element_tag_prefix}AnalysisSoftware"):
@@ -88,17 +84,16 @@ def _peptide_lookup(entry, entry_tag, sequence, modifications, peptide_lookup):
     if entry_tag == (f"{element_tag_prefix}PeptideSequence"):
         sequence = {"sequence": entry.text}
     elif entry_tag == (f"{element_tag_prefix}Modification"):
-        modifications.update(
-            {"monoisotopicMassDelta": entry.attrib["monoisotopicMassDelta"]}
-        )
-        modifications.update({"location": entry.attrib["location"]})
+        mod = {"monoisotopicMassDelta": entry.attrib["monoisotopicMassDelta"]}
+        mod.update({"location": entry.attrib["location"]})
+        modifications.append(mod)
     elif entry_tag == (f"{element_tag_prefix}Peptide"):
         if len(modifications) > 0:
             peptide_lookup[entry.attrib["id"]] = {"modifications": modifications}
         else:
             peptide_lookup[entry.attrib["id"]] = {"modifications": ""}
         peptide_lookup[entry.attrib["id"]].update(sequence)
-        modifications = {}
+        modifications = []
         sequence = ""
     return sequence, modifications, peptide_lookup
 
@@ -202,17 +197,24 @@ class Comet_2020_01_4_Parser(IdentBaseParser):
                 .agg(";".join, axis=1)
                 .str.rstrip(";")
             )
-        for i in peptide_lookup.keys():
-            if len(peptide_lookup[i]["modifications"]) != 0:
-                monoisotopicMassDelta = peptide_lookup[i]["modifications"][
-                    "monoisotopicMassDelta"
-                ]
-                location = peptide_lookup[i]["modifications"]["location"]
-                peptide_lookup[i][
-                    "modifications"
-                ] = f"{modification_mass_map[monoisotopicMassDelta]}:{location}"
+        lookup = {}
+        for pep_sequence, attribs in peptide_lookup.items():
+            lookup[pep_sequence] = {
+                "modifications": [],
+                "sequence": attribs["sequence"],
+            }
+            if len(attribs["modifications"]) != 0:
+                for mod in attribs["modifications"]:
+                    monoisotopicMassDelta = mod["monoisotopicMassDelta"]
+                    location = mod["location"]
+                    lookup[pep_sequence]["modifications"].append(
+                        f"{modification_mass_map[monoisotopicMassDelta]}:{location}"
+                    )
+            lookup[pep_sequence]["modifications"] = ";".join(
+                lookup[pep_sequence]["modifications"]
+            )
 
-        seq_mods = pd.DataFrame(self.df["sequence"].map(peptide_lookup).to_list())
+        seq_mods = pd.DataFrame(self.df["sequence"].map(lookup).to_list())
         self.df.loc[:, "modifications"] = (
             seq_mods["modifications"].str.cat(fixed_mod_strings, sep=";").str.strip(";")
         )

@@ -124,7 +124,7 @@ def test_engine_parsers_comet_iterator_xml():
     assert len(spec_records) == 60
     assert modification_mass_map["57.021464"] == "Carbamidomethyl"
     assert (
-        peptide_lookup["EACFAVEGPK;10:42.010565;"]["modifications"][
+        peptide_lookup["EACFAVEGPK;10:42.010565;"]["modifications"][0][
             "monoisotopicMassDelta"
         ]
         == "42.010565"
@@ -143,7 +143,7 @@ def test_engine_parsers_comet_peptide_lookup():
 
     element_tag_prefix = "{http://psidev.info/psi/pi/mzIdentML/1.2}"
 
-    modifications = {}
+    modifications = []
     sequence = {}
     peptide_lookup = {}
 
@@ -155,14 +155,14 @@ def test_engine_parsers_comet_peptide_lookup():
         )
 
     assert len(peptide_lookup) == 1
-    assert peptide_lookup["LRCASIQK;8:42.010565;"]["modifications"] == {
+    assert peptide_lookup["LRCASIQK;8:42.010565;"]["modifications"][0] == {
         "monoisotopicMassDelta": "42.010565",
         "location": "0",
     }
     assert peptide_lookup["LRCASIQK;8:42.010565;"]["sequence"] == "LRCASIQK"
     assert peptide_lookup == {
         "LRCASIQK;8:42.010565;": {
-            "modifications": {"monoisotopicMassDelta": "42.010565", "location": "0"},
+            "modifications": [{"monoisotopicMassDelta": "42.010565", "location": "0"}],
             "sequence": "LRCASIQK",
         }
     }
