@@ -23,12 +23,9 @@ def get_atom_counts(sequences, modifications, compositions):
     for composition in compositions.values():
         for element in composition.keys():
             unique_elements.add(element)
-    # C and H first then the rest of the elements
-    elements = list(
-        sorted(
-            unique_elements, key=lambda e: "00" if e == "C" else "01" if e == "H" else e
-        )
-    )
+
+    elements = ["C", "H"] + sorted(unique_elements - set(["C", "H"]))
+
     atom_counts = np.zeros(shape=(len(sequences), len(elements)), dtype=int)
     for aa_or_mod in compositions.keys():
         ordered_element_multiplier = []
