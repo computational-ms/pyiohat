@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 import uparma
+from chemical_composition import ChemicalComposition
 from loguru import logger
 
 
@@ -25,6 +26,9 @@ class BaseParser:
         self.params = params
         self.xml_file_list = self.params.get("xml_file_list", None)
         self.param_mapper = uparma.UParma()
+        self.cc = ChemicalComposition(
+            unimod_file_list=self.params.get("xml_file_list", None)
+        )
         self.style = None
 
     @classmethod

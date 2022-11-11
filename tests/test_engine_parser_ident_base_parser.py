@@ -3,10 +3,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
-from chemical_composition import ChemicalComposition
 
 from pyprotista.parsers.ident_base_parser import IdentBaseParser
-from pyprotista.parsers.misc import get_composition_and_mass_and_accuracy
 from pyprotista.utils import merge_and_join_dicts
 
 
@@ -18,11 +16,14 @@ def test_base_parser_read_rt_lookup_file():
 
     bp = IdentBaseParser(input_file, params={"rt_pickle_name": rt_lookup_path})
     rt_lookup = bp._read_meta_info_lookup_file()
-    assert (rt_lookup["rt_unit"] == 1).all()
-    assert pytest.approx(rt_lookup["precursor_mz"].mean()) == 550.8444810049874
+    assert len(rt_lookup) == 1120
+    precursor_mzs = [list(specs.values())[-1][-1] for specs in rt_lookup.values()]
+    assert pytest.approx(sum(precursor_mzs) / len(precursor_mzs)) == 550.8444810049874
     # check consistency
-    assert pytest.approx(rt_lookup.loc[2450, "precursor_mz"]) == 618.2697
-    assert pytest.approx(rt_lookup.loc[2450, "rt"]) == 1534.4619140625
+    assert 2450 in rt_lookup
+    assert 1534.4619140625 in rt_lookup[2450]
+    assert pytest.approx(rt_lookup[2450][1534.4619140625][0]) == "path/for/glory.mzML"
+    assert pytest.approx(rt_lookup[2450][1534.4619140625][1]) == 618.2697
 
 
 def test_engine_parsers_IdentBaseParser_init():
@@ -182,6 +183,20 @@ def test_calc_masses_offsets_and_composition():
             "rt_pickle_name": pytest._test_path / "data/_ursgal_lookup.csv",
             "validation_score_field": {"msfragger_3_0": "msfragger:hyperscore"},
             "bigger_scores_better": {"msfragger_3_0": True},
+            "modifications": [
+                {
+                    "aa": "*",
+                    "type": "opt",
+                    "position": "Prot-N-term",
+                    "name": "Acetyl",
+                },
+                {
+                    "aa": "C",
+                    "type": "fix",
+                    "position": "any",
+                    "name": "Carbamidomethyl",
+                },
+            ],
         },
     )
     obj.df = pd.DataFrame(
@@ -240,7 +255,7 @@ def test_get_exp_rt_and_mz():
     )
     assert np.allclose(
         obj.df["retention_time_seconds"],
-        [114735.00, 116583.52, 116805.30, 118033.46, 124967.99],
+        [1912.25, 1943.0586666666668, 1946.755, 1967.2243333333333, 2082.7998333333335],
         atol=1e-2,
     )
 
@@ -301,7 +316,26 @@ def test_calc_mass():
 
 
 def test_get_closest_isotopologue():
-    obj = IdentBaseParser(input_file=None, params=None)
+    obj = IdentBaseParser(
+        input_file=None,
+        params={
+            "cpus": 2,
+            "modifications": [
+                {
+                    "aa": "*",
+                    "type": "opt",
+                    "position": "Prot-N-term",
+                    "name": "Acetyl",
+                },
+                {
+                    "aa": "C",
+                    "type": "fix",
+                    "position": "any",
+                    "name": "Carbamidomethyl",
+                },
+            ],
+        },
+    )
     obj.df = pd.DataFrame(
         np.ones((2, len(obj.col_order) + 1)),
         columns=obj.col_order.to_list() + ["msfragger:hyperscore"],
@@ -328,52 +362,64 @@ def test_get_closest_isotopologue():
 
 
 def test_get_composition():
-    seq = "PEPTCIDE"
-    mods = ""
-    # Set up ChemicalComposition like it would be using the initalizer
-    get_composition_and_mass_and_accuracy.cc = ChemicalComposition()
-    # Without modifications
-    comp, _, _ = get_composition_and_mass_and_accuracy(
-        seq=seq,
-        mods=mods,
-        exp_mz=0,
-        charge=1,
+    obj = IdentBaseParser(
+        input_file=None,
+        params={
+            "cpus": 2,
+            "modifications": [
+                {
+                    "aa": "*",
+                    "type": "opt",
+                    "position": "Prot-N-term",
+                    "name": "Acetyl",
+                },
+                {
+                    "aa": "C",
+                    "type": "fix",
+                    "position": "any",
+                    "name": "Carbamidomethyl",
+                },
+                {
+                    "aa": "*",
+                    "type": "opt",
+                    "position": "any",
+                    "name": "Label:18O(1)",
+                },
+                {
+                    "aa": "*",
+                    "type": "opt",
+                    "position": "any",
+                    "name": "CustomMod42",
+                },
+            ],
+            "xml_file_list": [Path(pytest._test_path / "data" / "custom_mod.xml")],
+        },
     )
-    assert comp == "C(37)H(58)N(8)O(16)S(1)"
+    obj.df = pd.DataFrame(
+        np.ones((4, len(obj.col_order) + 1)),
+        columns=obj.col_order.to_list() + ["msfragger:hyperscore"],
+    )
+    obj.df["sequence"] = 4 * ["PEPTCIDE"]
+    obj.df["modifications"] = [
+        "",
+        "Acetyl:0;Carbamidomethyl:5",
+        "Acetyl:0;Carbamidomethyl:5;Label:18O(1):7",
+        "CustomMod42:4",
+    ]
+    seq = "PEPTCIDE"
+    obj.calc_masses_offsets_and_composition()
+
+    # Without modifications
+    assert obj.df.loc[0, "chemical_composition"] == "C(37)H(58)N(8)O(16)S(1)"
 
     # With modifications
-    mods = "Acetyl:0;Carbamidomethyl:5"
-    comp, _, _ = get_composition_and_mass_and_accuracy(
-        seq=seq,
-        mods=mods,
-        exp_mz=0,
-        charge=1,
-    )
-    assert comp == "C(41)H(63)N(9)O(18)S(1)"
+    assert obj.df.loc[1, "chemical_composition"] == "C(41)H(63)N(9)O(18)S(1)"
 
     # With labeled modifications
-    mods = "Acetyl:0;Carbamidomethyl:5;Label:18O(1):7"
-    comp, _, _ = get_composition_and_mass_and_accuracy(
-        seq=seq,
-        mods=mods,
-        exp_mz=0,
-        charge=1,
-    )
-    assert comp == "C(41)H(63)18O(1)N(9)O(17)S(1)"
+    assert obj.df.loc[2, "chemical_composition"] == "C(41)H(63)18O(1)N(9)O(17)S(1)"
 
-    mods = "CustomMod42:4"
     # Change the ChemicalComposition instance to use custom mods
-    get_composition_and_mass_and_accuracy.cc = ChemicalComposition(
-        unimod_file_list=[Path(pytest._test_path / "data" / "custom_mod.xml")],
-        add_default_files=False,
-    )
-    comp, _, _ = get_composition_and_mass_and_accuracy(
-        seq=seq,
-        mods=mods,
-        exp_mz=0,
-        charge=1,
-    )
-    assert comp == "C(37)H(61)13C(3)N(8)O(16)S(1)"
+    assert obj.df.loc[3, "chemical_composition"] == "C(37)H(61)13C(3)N(8)O(16)S(1)"
 
 
 def test_merge_and_join_dicts():
@@ -573,11 +619,11 @@ def test_groupby_rt_and_spec_id():
         is True
     )
     assert (
-        all(obj.df["retention_time_seconds"] == [114735.0096, 116583.5268, 116805.3012])
+        all(obj.df["retention_time_seconds"] == [1912.25016, 1943.05878, 1946.75502])
         is True
     )
     with pytest.raises(KeyError):
-        obj.df[0, "spectrum_id"] = 1234567
+        obj.df.loc[0, "spectrum_id"] = 1234567
         obj.get_meta_info()
 
 
