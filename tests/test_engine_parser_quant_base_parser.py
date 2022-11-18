@@ -18,9 +18,24 @@ def test_engine_parsers_QuantBaseParser_init():
             "rt_pickle_name": rt_lookup_path,
             "database": db_path,
             "modifications": [
-                "C,fix,any,Carbamidomethyl",
-                "M,opt,any,Oxidation",
-                "*,opt,Prot-N-term,Acetyl",
+                {
+                    "aa": "M",
+                    "type": "opt",
+                    "position": "any",
+                    "name": "Oxidation",
+                },
+                {
+                    "aa": "C",
+                    "type": "fix",
+                    "position": "any",
+                    "name": "Carbamidomethyl",
+                },
+                {
+                    "aa": "*",
+                    "type": "opt",
+                    "position": "Prot-N-term",
+                    "name": "Acetyl",
+                },
             ],
         },
     )
