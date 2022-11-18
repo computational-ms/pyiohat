@@ -102,7 +102,8 @@ class BaseParser:
                 rt = float(row["rt"])
                 if row["rt_unit"] == "minute" or row["rt_unit"] == "min":
                     rt *= 60.0
-                rt_lookup[int(row["spectrum_id"])] = {}
+                if int(row["spectrum_id"]) not in rt_lookup:
+                    rt_lookup[int(row["spectrum_id"])] = {}
                 if row["precursor_mz"] == "":
                     precursor_mz = np.nan
                 else:

@@ -8,7 +8,7 @@ from pyprotista.parsers.quant.flash_lfq_1_2_0_parser import (
 
 def test_engine_parsers_flashLFQ_init():
     input_file = pytest._test_path / "data" / "flash_lfq_1_2_0_quantified_peaks.tsv"
-    rt_lookup_path = pytest._test_path / "data" / "BSA1_ursgal_lookup.csv"
+    rt_lookup_path = pytest._test_path / "data" / "BSA2_ursgal_lookup.csv"
     parser = FlashLFQ_1_2_0_Parser(
         input_file,
         params={
@@ -53,7 +53,7 @@ def test_engine_parsers_flashLFQ_file_not_matches_parser():
 
 def test_engine_parsers_flashLFQ_unify_row():
     input_file = pytest._test_path / "data" / "flash_lfq_1_2_0_quantified_peaks.tsv"
-    rt_lookup_path = pytest._test_path / "data" / "BSA1_ursgal_lookup.csv"
+    rt_lookup_path = pytest._test_path / "data" / "BSA2_ursgal_lookup.csv"
 
     parser = FlashLFQ_1_2_0_Parser(
         input_file,
@@ -82,14 +82,14 @@ def test_engine_parsers_flashLFQ_unify_row():
         },
     )
     df = parser.unify()
-    assert len(df) == 10
-    assert pytest.approx(df["flashlfq:ms2_retention_time"].mean()) == 117402.71191
-    assert pytest.approx(df["quant_value"].mean()) == 337335.28125
+    assert len(df) == 11
+    assert pytest.approx(df["flashlfq:ms2_retention_time"].mean()) == 118178.01055184663
+    assert pytest.approx(df["quant_value"].mean()) == 306668.4375
 
 
 def test_engine_parsers_flashLFQ_extract_mods():
     input_file = pytest._test_path / "data" / "flash_lfq_1_2_0_quantified_peaks.tsv"
-    rt_lookup_path = pytest._test_path / "data" / "_ursgal_lookup.csv"
+    rt_lookup_path = pytest._test_path / "data" / "BSA2_ursgal_lookup.csv"
 
     parser = FlashLFQ_1_2_0_Parser(
         input_file,

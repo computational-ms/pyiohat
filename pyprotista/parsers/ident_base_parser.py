@@ -35,7 +35,7 @@ class IdentBaseParser(BaseParser):
         self.PROTON = PROTON
         self.IUPAC_AAS = tuple("ACDEFGHIKLMNPQRSTUVWY")
         self.df = None
-        
+
         successfully_mapped_mods = set(
             mod["name"] for mod in self.params["mapped_mods"]["fix"]
         ) | set(mod["name"] for mod in self.params["mapped_mods"]["opt"])

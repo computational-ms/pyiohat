@@ -30,11 +30,14 @@ class FlashLFQ_1_2_0_Parser(QuantBaseParser):
         self.round_precision = 5
 
         self.rt_to_spec_id = {}
+        self.filestem_to_path = {}
         for key, val in self.rt_lookup.items():
             for key2, val2 in val.items():
                 self.rt_to_spec_id.setdefault(val2[0], {})[
                     round(key2, self.round_precision)
                 ] = key
+                if val2[0] not in self.filestem_to_path:
+                    self.filestem_to_path[Path(val2[0]).stem] = val2[0]
 
             # round(list(d.keys())[0], self.round_precision): key
             # for key, d in self.rt_lookup.items()
@@ -103,16 +106,13 @@ class FlashLFQ_1_2_0_Parser(QuantBaseParser):
 
         self.get_chemical_composition()
         self.get_meta_info()
-        # import ipdb;ipdb.set_trace()
-
         self.df["quant_run_id"] = "FlashLFQ"
 
         self.process_unify_style()
         return self.df
 
     def get_meta_info(self):
-
-        self.df["raw_filename"] = ""
+        self.df["raw_filename"] = self.df["raw_filename"].map(self.filestem_to_path)
         rounded_rts = (self.df["flashlfq:ms2_retention_time"] / 60).apply(
             round, args=(self.round_precision,)
         )
@@ -121,9 +121,6 @@ class FlashLFQ_1_2_0_Parser(QuantBaseParser):
         self.df["linked_spectrum_id"] = [
             self.rt_to_spec_id[f][r] for i, (f, r) in rounded_rts.iterrows()
         ]
-        # from IPython.core.debugger import Pdb
-
-        # Pdb().set_trace()
 
     def get_chemical_composition(self):
         mods = self.df["flashlfq:full_sequence"].apply(self.translate_mods)

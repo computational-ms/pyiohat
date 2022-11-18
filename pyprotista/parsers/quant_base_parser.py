@@ -3,6 +3,7 @@
 from pyprotista.parsers.base_parser import BaseParser
 import pandas as pd
 
+
 class QuantBaseParser(BaseParser):
     """Base class of all quant parsers."""
 
