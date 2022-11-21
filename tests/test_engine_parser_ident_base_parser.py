@@ -22,7 +22,7 @@ def test_base_parser_read_rt_lookup_file():
     # check consistency
     assert 2450 in rt_lookup
     assert 1534.4619140625 in rt_lookup[2450]
-    assert pytest.approx(rt_lookup[2450][1534.4619140625][0]) == "path/for/glory.mzML"
+    assert rt_lookup[2450][1534.4619140625][0] == "path/for/glory.mzML"
     assert pytest.approx(rt_lookup[2450][1534.4619140625][1]) == 618.2697
 
 
