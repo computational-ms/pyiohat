@@ -1,76 +1,90 @@
 """Engine parser."""
-
 import numpy as np
 import pandas as pd
 import regex as re
-import xml.etree.cElementTree as etree
-
+import xml.etree.ElementTree as etree
+import warnings
 from pyprotista.parsers.ident_base_parser import IdentBaseParser
 
-element_tag_prefix = "{http://psidev.info/psi/pi/mzIdentML/1.2}"
 
+def get_xml_data(xml_file, mapping_dict):
+    """For loop over one xml file using xml.etree.ElementTree.iterparse.
 
-def _iterator_xml(xml_file, mapping_dict):
+    Provide temporary variables for iteration.
+    Call functions get_peptide_lookup in stage 1, get_modification_mass_map in stage 2 and get_spec_records in stage 3.
+
+    Args:
+        xml_file (mzid): input file
+        mapping_dict (dict)
+
+    Returns:
+        version (str): contains the version of the mzid
+        peptide_lookup (dict): contains peptide id's with their sequences and modifications
+        modification_mass_map (dict): contains name and massDelta of Modifications
+        spec_records (list): list of dicts containing single_specs
+        fixed_mods (dict): contains Modifications from modification_mass_map where fixedMod = true
+    """
     version = ""
-    stage = 0
+    peptide_lookup = {}
+    modification_mass_map = {}
+    spec_records = []
+    fixed_mods = {}
 
+    # Temporary variables, get overwritten multiple times during iteration
+    stage = 0
     modifications = []
     sequence = {}
-    peptide_lookup = {}
-
     spec_results = {}
     spec_ident_items = []
-    spec_records = []
-
-    modification_mass_map = {}
     mod_name = ""
-    fixed_mods = {}
 
     for event, entry in etree.iterparse(xml_file):
         entry_tag = entry.tag
-
-        if entry_tag == (f"{element_tag_prefix}PeptideEvidence"):
-            stage = 0
+        if entry_tag.endswith("PeptideEvidence"):
             # Back to 0, so no cvParam gets written
-        elif entry_tag == (f"{element_tag_prefix}ModificationParams"):
             stage = 0
-        elif entry_tag == (f"{element_tag_prefix}PeptideEvidenceRef"):
-            continue
-
+        elif entry_tag.endswith("ModificationParams"):
+            stage = 0
         elif stage == 1:
-            sequence, modifications, peptide_lookup = _peptide_lookup(
-                entry, entry_tag, sequence, modifications, peptide_lookup
+            sequence, modifications, peptide_lookup = get_peptide_lookup(
+                entry=entry,
+                entry_tag=entry_tag,
+                sequence=sequence,
+                modifications=modifications,
+                peptide_lookup=peptide_lookup,
             )
         elif stage == 2:
-            modification_mass_map, mod_name, fixed_mods = _get_modifications(
-                entry, entry_tag, modification_mass_map, mod_name, fixed_mods
+            modification_mass_map, mod_name, fixed_mods = get_modification_mass_map(
+                entry=entry,
+                entry_tag=entry_tag,
+                modification_mass_map=modification_mass_map,
+                mod_name=mod_name,
+                fixed_mods=fixed_mods,
             )
         elif stage == 3:
-            spec_results, spec_ident_items, spec_records = _spec_records(
-                entry,
-                entry_tag,
-                spec_results,
-                spec_ident_items,
-                spec_records,
-                mapping_dict,
+            spec_results, spec_ident_items, spec_records = get_spec_records(
+                entry=entry,
+                entry_tag=entry_tag,
+                spec_results=spec_results,
+                spec_ident_items=spec_ident_items,
+                spec_records=spec_records,
+                mapping_dict=mapping_dict,
             )
-
-        elif entry_tag == (f"{element_tag_prefix}DBSequence"):
+        elif entry_tag.endswith("DBSequence"):
             stage = 1
-            # Short before peptide_lookup begins
-        elif entry_tag == (f"{element_tag_prefix}AdditionalSearchParams"):
+        elif entry_tag.endswith("AdditionalSearchParams"):
             stage = 2
-        elif entry_tag == (f"{element_tag_prefix}Inputs"):
+        elif entry_tag.endswith("Inputs"):
             stage = 3
-            # Short before spec_record begins
-
-        elif entry_tag == (f"{element_tag_prefix}AnalysisSoftware"):
-            version = "comet_" + "_".join(
-                re.findall(r"([/d]*\d+)", entry.attrib["version"])
-            )
-
+        elif entry_tag.endswith("AnalysisSoftware"):
+            version = "comet_" + "_".join(re.findall("[0-9]+", entry.attrib["version"]))
+        elif entry_tag.endswith("cvList"):
+            if entry_tag != "{http://psidev.info/psi/pi/mzIdentML/1.2}cvList":
+                warnings.warn(
+                    "Wrong mzIdentML format - Parser might not operate correctly!"
+                )
         entry.clear()
-        if entry_tag == (f"{element_tag_prefix}SpectrumIdentificationList"):
+        if entry_tag.endswith("SpectrumIdentificationList"):
             return (
                 version,
                 peptide_lookup,
@@ -80,53 +94,99 @@ def _iterator_xml(xml_file, mapping_dict):
             )
 
 
-def _peptide_lookup(entry, entry_tag, sequence, modifications, peptide_lookup):
-    if entry_tag == (f"{element_tag_prefix}PeptideSequence"):
+def get_peptide_lookup(entry, entry_tag, sequence, modifications, peptide_lookup):
+    """Take one entry at a time to return peptides with their sequences and modifications.
+
+    Args:
+        entry (element) : current xml element
+        entry_tag (element.tag): was assigned earlier
+        sequence (dict): variable from get_xml_data that gets updated
+        modifications (str): variable from get_xml_data that gets appended
+        peptide_lookup (dict): variable from get_xml_data that gets updated
+
+    Returns:
+        sequence (dict): temporary assigned
+        modifications (str): temporary assigned
+        peptide_lookup (dict): updated dict with one more peptide
+    """
+    if entry_tag.endswith("PeptideSequence"):
         sequence = {"sequence": entry.text}
-    elif entry_tag == (f"{element_tag_prefix}Modification"):
+    elif entry_tag.endswith("Modification"):
         mod = {"monoisotopicMassDelta": entry.attrib["monoisotopicMassDelta"]}
         mod.update({"location": entry.attrib["location"]})
         modifications.append(mod)
-    elif entry_tag == (f"{element_tag_prefix}Peptide"):
+    elif entry_tag.endswith("Peptide"):
         if len(modifications) > 0:
             peptide_lookup[entry.attrib["id"]] = {"modifications": modifications}
         else:
             peptide_lookup[entry.attrib["id"]] = {"modifications": ""}
         peptide_lookup[entry.attrib["id"]].update(sequence)
         modifications = []
-        sequence = ""
     return sequence, modifications, peptide_lookup
 
 
-def _get_modifications(entry, entry_tag, modification_mass_map, mod_name, fixed_mods):
-    if entry_tag == (f"{element_tag_prefix}cvParam"):
+def get_modification_mass_map(
+    entry, entry_tag, modification_mass_map, mod_name, fixed_mods
+):
+    """Take one entry at a time to return Modification name with massDelta. Also check if Modification is fixed.
+
+    Args:
+        entry (element) : current xml element
+        entry_tag (element.tag): was assigned earlier
+        modification_mass_map (dict): contains all mods this far
+        mod_name (str): contains the name of the Modification
+        fixed_mods (dict): contains all fixed mods this far
+
+    Returns:
+        modification_mass_map (dict): contains one more modification
+        mod_name (str): contains the name of the Modification
+        fixed_mods (dict): contains mods where fixedMod = true
+    """
+    if entry_tag.endswith("cvParam"):
         mod_name = entry.attrib["name"]
-    elif entry_tag == (f"{element_tag_prefix}SearchModification"):
+    elif entry_tag.endswith("SearchModification"):
         modification_mass_map[entry.attrib["massDelta"]] = mod_name
         if entry.attrib["fixedMod"] == "true":
             fixed_mods.update({entry.attrib["residues"]: mod_name})
     return modification_mass_map, mod_name, fixed_mods
 
 
-def _spec_records(
+def get_spec_records(
     entry, entry_tag, spec_results, spec_ident_items, spec_records, mapping_dict
 ):
-    if entry_tag == (f"{element_tag_prefix}cvParam"):
+    """Take one entry at a time to return peptides with their sequences and modifications.
+
+    Args:
+        entry (element) : current xml element
+        entry_tag (element.tag): was assigned earlier
+        spec_results (dict): contains temporary spec information
+        spec_ident_items (list): contains all spectrum_identification_items from one spectrum_identification_result
+        spec_records (dict): contains all SpectrumIdentificationResult information
+        mapping_dict (dict): contains information on which attributes to keep
+
+    Returns:
+        spec_results (dict): contains temporary spec information
+        spec_ident_items (list): contains all spectrum_identification_items from one spectrum_identification_result
+        spec_records (dict): updated with more specs
+    """
+    if entry_tag.endswith("cvParam"):
         if entry.attrib["name"] in mapping_dict:
             spec_results.update(
                 {mapping_dict[entry.attrib["name"]]: entry.attrib["value"]}
             )
-    elif entry_tag == (f"{element_tag_prefix}SpectrumIdentificationItem"):
-        for i in list(entry.attrib):
-            if i in mapping_dict:
-                spec_results.update({mapping_dict[i]: entry.attrib[i]})
+    elif entry_tag.endswith("SpectrumIdentificationItem"):
+        for attribute in list(entry.attrib):
+            if attribute in mapping_dict.keys():
+                spec_results.update({mapping_dict[attribute]: entry.attrib[attribute]})
         spec_ident_items.append(spec_results)
         spec_results = {}
-    elif entry_tag == (f"{element_tag_prefix}SpectrumIdentificationResult"):
-        for i in spec_ident_items:
-            i.update(spec_results)
-            i.update({"spectrum_id": entry.attrib["spectrumID"].lstrip("scan=")})
-            spec_records.append(i)
+    elif entry_tag.endswith("SpectrumIdentificationResult"):
+        for spec_item in spec_ident_items:
+            spec_item.update(spec_results)
+            spec_item.update(
+                {"spectrum_id": entry.attrib["spectrumID"].lstrip("scan=")}
+            )
+            spec_records.append(spec_item)
         spec_results = {}
         spec_ident_items = []
     return spec_results, spec_ident_items, spec_records
@@ -148,7 +208,6 @@ class Comet_2020_01_4_Parser(IdentBaseParser):
                 "header_translations"
             ]["translated_value"].items()
         }
-        self.reference_dict.update({k: None for k in self.mapping_dict.values()})
 
     @classmethod
     def check_parser_compatibility(cls, file):
@@ -171,9 +230,19 @@ class Comet_2020_01_4_Parser(IdentBaseParser):
         contains_engine = "Comet" in head
         return is_mzid and contains_engine
 
-    def _map_mods_and_sequences(
-        self, fixed_mods, modification_mass_map, peptide_lookup
-    ):
+    def map_mods_and_sequences(self, fixed_mods, modification_mass_map, peptide_lookup):
+        """Create modification column in df.
+
+        Map correct modifications to corresponding sequence.
+
+        Args:
+            fixed_mods (dict): name and symbol of all fixed mods
+            modification_mass_map (dict): name and corresponding mass of mods
+            peptide_lookup (dict): sequences, with mods from input_file
+
+        Returns:
+            self.df (pd.Dataframe): new filled modifications column
+        """
         if len(fixed_mods) > 0:
             fixed_mod_strings = []
             for fm_res, fm_name in fixed_mods.items():
@@ -233,12 +302,10 @@ class Comet_2020_01_4_Parser(IdentBaseParser):
             spec_records,
             modification_mass_map,
             fixed_mods,
-        ) = _iterator_xml(self.input_file, self.mapping_dict)
+        ) = get_xml_data(self.input_file, self.mapping_dict)
         self.df = pd.DataFrame(spec_records)
-        self.df["modifications"] = None
-        self.df["retention_time_seconds"] = None
         self.df["search_engine"] = version
-        self._map_mods_and_sequences(fixed_mods, modification_mass_map, peptide_lookup)
+        self.map_mods_and_sequences(fixed_mods, modification_mass_map, peptide_lookup)
         self.process_unify_style()
 
         return self.df

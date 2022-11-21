@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
 import pytest
-from lxml import etree
+import xml.etree.ElementTree as etree
 
 from pyprotista.parsers.ident.comet_2020_01_4_parser import (
     Comet_2020_01_4_Parser,
-    _iterator_xml,
-    _spec_records,
-    _peptide_lookup,
-    _get_modifications,
+    get_xml_data,
+    get_spec_records,
+    get_peptide_lookup,
+    get_modification_mass_map,
 )
 
 
@@ -108,16 +108,16 @@ def test_engine_parsers_comet_check_dataframe_integrity():
     assert (df["raw_data_location"] == "path/for/glory.mzML").all()
 
 
-def test_engine_parsers_comet_iterator_xml():
+def test_engine_parsers_comet_get_xml_data():
     input_file = pytest._test_path / "data" / "BSA1_comet_2020_01_4.mzid"
-    obj = Comet_2020_01_4_Parser(input_file=None, params=None)
+    parser = Comet_2020_01_4_Parser(input_file=None, params=None)
     (
         version,
         peptide_lookup,
         spec_records,
         modification_mass_map,
         fixed_mods,
-    ) = _iterator_xml(input_file, obj.mapping_dict)
+    ) = get_xml_data(input_file, parser.mapping_dict)
 
     assert len(peptide_lookup) == 24
     assert len(modification_mass_map) == 3
@@ -132,7 +132,7 @@ def test_engine_parsers_comet_iterator_xml():
     assert spec_records[0]["comet:e_value"] == "3.76E+01"
 
 
-def test_engine_parsers_comet_peptide_lookup():
+def test_engine_parsers_comet_get_peptide_lookup():
     peptide = etree.Element("Peptide", id="LRCASIQK;8:42.010565;")
     peptide_sequence = etree.Element("PeptideSequence")
     peptide_sequence.text = "LRCASIQK"
@@ -141,17 +141,18 @@ def test_engine_parsers_comet_peptide_lookup():
     )
     results = [peptide_sequence, modification, peptide]
 
-    element_tag_prefix = "{http://psidev.info/psi/pi/mzIdentML/1.2}"
-
     modifications = []
     sequence = {}
     peptide_lookup = {}
 
-    for i in results:
-        entry = i
-        entry_tag = f"{element_tag_prefix}{i.tag}"
-        sequence, modifications, peptide_lookup = _peptide_lookup(
-            entry, entry_tag, sequence, modifications, peptide_lookup
+    for entry in results:
+        entry_tag = entry.tag
+        sequence, modifications, peptide_lookup = get_peptide_lookup(
+            entry=entry,
+            entry_tag=entry_tag,
+            sequence=sequence,
+            modifications=modifications,
+            peptide_lookup=peptide_lookup,
         )
 
     assert len(peptide_lookup) == 1
@@ -168,7 +169,7 @@ def test_engine_parsers_comet_peptide_lookup():
     }
 
 
-def test_engine_parsers_comet_spec_records():
+def test_engine_parsers_comet_get_spec_records():
     cv_param = etree.Element(
         "cvParam",
         cvRef="MS",
@@ -193,24 +194,21 @@ def test_engine_parsers_comet_spec_records():
         spectraData_ref="SD0",
     )
     results = [cv_param, spectrum_identification_item, spectrum_identification_result]
-    obj = Comet_2020_01_4_Parser(input_file=None, params=None)
-
-    element_tag_prefix = "{http://psidev.info/psi/pi/mzIdentML/1.2}"
+    parser = Comet_2020_01_4_Parser(input_file=None, params=None)
 
     spec_results = {}
     spec_ident_items = []
     spec_records = []
 
-    for i in results:
-        entry = i
-        entry_tag = f"{element_tag_prefix}{i.tag}"
-        spec_results, spec_ident_items, spec_records = _spec_records(
-            entry,
-            entry_tag,
-            spec_results,
-            spec_ident_items,
-            spec_records,
-            obj.mapping_dict,
+    for entry in results:
+        entry_tag = entry.tag
+        spec_results, spec_ident_items, spec_records = get_spec_records(
+            entry=entry,
+            entry_tag=entry_tag,
+            spec_results=spec_results,
+            spec_ident_items=spec_ident_items,
+            spec_records=spec_records,
+            mapping_dict=parser.mapping_dict,
         )
     assert spec_records == [
         {
@@ -231,7 +229,7 @@ def test_engine_parsers_comet_spec_records():
     assert spec_records[0]["spectrum_id"] == "2458"
 
 
-def test_engine_parsers_comet_get_modifications():
+def test_engine_parsers_comet_get_modification_mass_map():
     cv_param = etree.Element(
         "cvParam", cvRef="UNIMOD", accession="UNIMOD:UNIMOD:4", name="Carbamidomethyl"
     )
@@ -239,17 +237,19 @@ def test_engine_parsers_comet_get_modifications():
         "SearchModification", residues="C", massDelta="57.021464", fixedMod="true"
     )
     results = [cv_param, search_modification]
-    element_tag_prefix = "{http://psidev.info/psi/pi/mzIdentML/1.2}"
 
     modification_mass_map = {}
     mod_name = ""
     fixed_mods = {}
 
-    for i in results:
-        entry = i
-        entry_tag = f"{element_tag_prefix}{i.tag}"
-        modification_mass_map, mod_name, fixed_mods = _get_modifications(
-            entry, entry_tag, modification_mass_map, mod_name, fixed_mods
+    for entry in results:
+        entry_tag = entry.tag
+        modification_mass_map, mod_name, fixed_mods = get_modification_mass_map(
+            entry=entry,
+            entry_tag=entry_tag,
+            modification_mass_map=modification_mass_map,
+            mod_name=mod_name,
+            fixed_mods=fixed_mods,
         )
 
     assert fixed_mods == {"C": "Carbamidomethyl"}
