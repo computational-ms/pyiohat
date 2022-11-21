@@ -1,103 +1,148 @@
 """Engine parser."""
 import pandas as pd
 import regex as re
-import xml.etree.cElementTree as etree
+import xml.etree.ElementTree as etree
 from pyprotista.parsers.ident_base_parser import IdentBaseParser
+import warnings
 
-element_tag_prefix = "{http://psidev.info/psi/pi/mzIdentML/1.1}"
 
+def get_xml_data(xml_file, mapping_dict):
+    """For loop over one xml file using xml.etree.ElementTree.iterparse.
 
-def _iterator_xml(xml_file, mapping_dict):
+    Provide temporary variables for iteration.
+    Call functions get_peptide_lookup in stage 1 and get_spec_records in stage 2.
+
+    Args:
+        xml_file (mzid): input file
+        mapping_dict (dict)
+
+    Returns:
+        version (str): contains the version of the mzid
+        peptide_lookup (dict): contains all the peptides with their sequences and modifications
+        spec_records (list): list of dicts containing single_specs
+    """
     version = ""
+    peptide_lookup = {}
+    spec_records = []
+
+    # temporary variables, get overwritten multiple times during iteration
     stage = 0
     cv_param_modifications = ""
     sequence = {}
-    peptide_lookup = {}
     spec_results = {}
     spec_ident_items = []
-    spec_records = []
 
     for event, entry in etree.iterparse(xml_file):
         entry_tag = entry.tag
-
-        if entry_tag == (f"{element_tag_prefix}PeptideEvidence"):
-            stage = 0
-            continue
+        if entry_tag.endswith("PeptideEvidence"):
             # Back to 0, so no cvParam gets written
-
+            stage = 0
         elif stage == 1:
-            sequence, cv_param_modifications, peptide_lookup = _peptide_lookup(
-                entry, entry_tag, sequence, cv_param_modifications, peptide_lookup
+            sequence, cv_param_modifications, peptide_lookup = get_peptide_lookup(
+                entry=entry,
+                entry_tag=entry_tag,
+                sequence=sequence,
+                cv_param_modifications=cv_param_modifications,
+                peptide_lookup=peptide_lookup,
             )
         elif stage == 2:
-            spec_results, spec_ident_items, spec_records = _spec_records(
-                entry,
-                entry_tag,
-                spec_results,
-                spec_ident_items,
-                spec_records,
-                mapping_dict,
+            spec_results, spec_ident_items, spec_records = get_spec_records(
+                entry=entry,
+                entry_tag=entry_tag,
+                spec_ident_items=spec_ident_items,
+                spec_results=spec_results,
+                spec_records=spec_records,
+                mapping_dict=mapping_dict,
             )
-
-        elif entry_tag == (f"{element_tag_prefix}DBSequence"):
+        elif entry_tag.endswith("DBSequence"):
             stage = 1
-            continue
-            # Short before peptide_lookup begins
-        elif entry_tag == (f"{element_tag_prefix}FragmentationTable"):
+        elif entry_tag.endswith("FragmentationTable"):
             stage = 2
-            continue
-            # Short before spec_record begins
-
-        elif entry_tag == (f"{element_tag_prefix}AnalysisSoftware"):
+        elif entry_tag.endswith("AnalysisSoftware"):
             version = "msgfplus_" + "_".join(
-                re.findall(r"([/d]*\d+)", entry.attrib["version"])
+                re.findall("[0-9]+", entry.attrib["version"])
             )
-
+        elif entry_tag.endswith("cvList"):
+            if entry_tag != "{http://psidev.info/psi/pi/mzIdentML/1.1}cvList":
+                warnings.warn(
+                    "Wrong mzIdentML format - Parser might not operate correctly!"
+                )
+        # RAM saver
         entry.clear()
-        if entry_tag == (f"{element_tag_prefix}SpectrumIdentificationList"):
+        if entry_tag.endswith("SpectrumIdentificationList"):
             return version, peptide_lookup, spec_records
 
 
-def _peptide_lookup(entry, entry_tag, sequence, cv_param_modifications, peptide_lookup):
-    if entry_tag == (f"{element_tag_prefix}PeptideSequence"):
+def get_peptide_lookup(
+    entry, entry_tag, sequence, cv_param_modifications, peptide_lookup
+):
+    """Take one entry at a time to return peptides with their sequences and modifications.
+
+    Args:
+        entry (element) : current xml element
+        entry_tag (element.tag): was assigned earlier
+        sequence (dict): variable from get_xml_data that gets updated
+        cv_param_modifications (str): variable from get_xml_data that gets appended
+        peptide_lookup (dict): variable from get_xml_data that gets updated
+
+    Returns:
+        sequence (dict): temporary assigned
+        cv_paparam_modifications (str): temporary assigned
+        peptide_lookup (dict): updated dict with one more peptide
+    """
+    if entry_tag.endswith("PeptideSequence"):
         sequence = {"sequence": entry.text}
-    elif entry_tag == (f"{element_tag_prefix}cvParam"):
+    elif entry_tag.endswith("cvParam"):
         if entry.attrib["name"] == "unknown modification":
             cv_param_modifications += entry.attrib["value"] + ":"
         else:
             cv_param_modifications += entry.attrib["name"] + ":"
-    elif entry_tag == (f"{element_tag_prefix}Modification"):
+    elif entry_tag.endswith("Modification"):
         cv_param_modifications += entry.attrib["location"] + ";"
-    elif entry_tag == (f"{element_tag_prefix}Peptide"):
+    elif entry_tag.endswith("Peptide"):
         peptide_lookup[entry.attrib["id"]] = {
             "modifications": cv_param_modifications.rstrip(";")
         }
         peptide_lookup[entry.attrib["id"]].update(sequence)
         cv_param_modifications = ""
-        sequence = ""
     return sequence, cv_param_modifications, peptide_lookup
 
 
-def _spec_records(
-    entry, entry_tag, spec_results, spec_ident_items, spec_records, mapping_dict
+def get_spec_records(
+    entry, entry_tag, spec_ident_items, spec_results, spec_records, mapping_dict
 ):
-    if entry_tag == (f"{element_tag_prefix}cvParam") or entry_tag == (
-        f"{element_tag_prefix}userParam"
-    ):
+    """Take one entry at a time to return peptides with their sequences and modifications.
+
+    Args:
+        entry (element) : current xml element
+        entry_tag (element.tag): was assigned earlier
+        spec_ident_items (list): contains all spectrum_identification_items from one spectrum_identification_result
+        spec_results (dict): contains temporary spec information
+        spec_records (dict): contains all SpectrumIdentificationResult information
+        mapping_dict (dict): contains information on which attributes to keep
+
+    Returns:
+        spec_results (dict): contains temporary spec information
+        spec_ident_items (list): contains all spectrum_identification_items from one spectrum_identification_result
+        spec_records (dict): updated with more specs
+    """
+    if entry_tag.endswith("cvParam") or entry_tag.endswith("userParam"):
         if entry.attrib["name"] in mapping_dict:
             spec_results.update(
                 {mapping_dict[entry.attrib["name"]]: entry.attrib["value"]}
             )
-    elif entry_tag == (f"{element_tag_prefix}SpectrumIdentificationItem"):
-        for i in list(entry.attrib):
-            if i in mapping_dict:
-                spec_results.update({mapping_dict[i]: entry.attrib[i]})
+    elif entry_tag.endswith("SpectrumIdentificationItem"):
+        for attribute in list(entry.attrib):
+            if attribute in mapping_dict.keys():
+                spec_results.update({mapping_dict[attribute]: entry.attrib[attribute]})
+        # multiple SpectrumIdentificationItems possible, therefore create a list and reset spec_results
         spec_ident_items.append(spec_results)
         spec_results = {}
-    elif entry_tag == (f"{element_tag_prefix}SpectrumIdentificationResult"):
-        for i in spec_ident_items:
-            i.update(spec_results)
-            spec_records.append(i)
+
+    elif entry_tag.endswith("SpectrumIdentificationResult"):
+        for spec_item in spec_ident_items:
+            spec_item.update(spec_results)
+            spec_records.append(spec_item)
         spec_results = {}
         spec_ident_items = []
     return spec_results, spec_ident_items, spec_records
@@ -119,7 +164,6 @@ class MSGFPlus_2021_03_22_Parser(IdentBaseParser):
                 "header_translations"
             ]["translated_value"].items()
         }
-        self.reference_dict.update({k: None for k in self.mapping_dict.values()})
 
     @classmethod
     def check_parser_compatibility(cls, file):
@@ -132,7 +176,7 @@ class MSGFPlus_2021_03_22_Parser(IdentBaseParser):
             bool: True if parser and file are compatible
 
         """
-        is_mzid = file.as_posix().endswith(".mzid")
+        is_mzid = file.name.endswith(".mzid")
 
         with open(file.as_posix()) as f:
             try:
@@ -149,7 +193,7 @@ class MSGFPlus_2021_03_22_Parser(IdentBaseParser):
         Returns:
             self.df (pd.DataFrame): unified dataframe
         """
-        version, peptide_lookup, spec_records = _iterator_xml(
+        version, peptide_lookup, spec_records = get_xml_data(
             self.input_file, self.mapping_dict
         )
         self.df = pd.DataFrame(spec_records)

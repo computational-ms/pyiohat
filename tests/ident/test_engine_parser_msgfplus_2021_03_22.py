@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
 import pytest
-from lxml import etree
+import xml.etree.ElementTree as etree
 
 from pyprotista.parsers.ident.msgfplus_2021_03_22_parser import (
     MSGFPlus_2021_03_22_Parser,
-    _iterator_xml,
-    _peptide_lookup,
-    _spec_records,
+    get_xml_data,
+    get_peptide_lookup,
+    get_spec_records,
 )
 
 
@@ -111,39 +111,6 @@ def test_engine_parsers_msgfplus_check_dataframe_integrity():
     assert df["modifications"].str.count(":").sum() == 71
 
 
-def test_engine_parsers_msgfplus_get_peptide_lookup():
-
-    cv_param = etree.Element(
-        "cvParam", cvRef="UNIMOD", accession="UNIMOD:4", name="Carbamidomethyl"
-    )
-    modification = etree.Element(
-        "Modification", location="6", monoisotopicMassDelta="57.021464"
-    )
-    peptide_sequence = etree.Element("PeptideSequence")
-    peptide_sequence.text = "DDPHACYSTVFDK"
-    peptide = etree.Element("Peptide", id="Pep_DDPHACYSTVFDK")
-
-    results = [cv_param, modification, peptide_sequence, peptide]
-
-    element_tag_prefix = "{http://psidev.info/psi/pi/mzIdentML/1.1}"
-
-    cv_param_modifications = ""
-    sequence = {}
-    peptide_lookup = {}
-
-    for i in results:
-        entry = i
-        entry_tag = f"{element_tag_prefix}{i.tag}"
-        sequence, cv_param_modifications, peptide_lookup = _peptide_lookup(
-            entry, entry_tag, sequence, cv_param_modifications, peptide_lookup
-        )
-
-    assert len(peptide_lookup) == 1
-    assert peptide_lookup["Pep_DDPHACYSTVFDK"]["modifications"] == "Carbamidomethyl:6"
-    assert peptide_lookup["Pep_DDPHACYSTVFDK"]["sequence"] == "DDPHACYSTVFDK"
-    assert cv_param_modifications == ""
-
-
 def test_engine_parsers_msgfplus_check_dataframe_integrity_unknown_mod():
     input_file = (
         pytest._test_path / "data" / "BSA1_msgfplus_2021_03_22_unknown_mod.mzid"
@@ -208,6 +175,57 @@ def test_engine_parsers_msgfplus_check_dataframe_integrity_unknown_mod():
     assert df["modifications"].str.count(":").sum() == 71
 
 
+def test_engine_parsers_msgfplus_get_xml_data():
+    input_file = pytest._test_path / "data" / "BSA1_msgfplus_2021_03_22.mzid"
+    obj = MSGFPlus_2021_03_22_Parser(input_file=None, params=None)
+
+    version, peptide_lookup, spec_records = get_xml_data(input_file, obj.mapping_dict)
+
+    assert version == "msgfplus_2021_03_22"
+    assert len(spec_records) == 92
+    assert len(peptide_lookup) == 24
+    assert spec_records[3]["ms-gf:evalue"] == "1.6910947E-9"
+    assert spec_records[3]["retention_time_seconds"] == "1793.826"
+    assert (
+        peptide_lookup["Pep_CCTESLVNR"]["modifications"]
+        == "Carbamidomethyl:1;Carbamidomethyl:2"
+    )
+
+
+def test_engine_parsers_msgfplus_get_peptide_lookup():
+
+    cv_param = etree.Element(
+        "cvParam", cvRef="UNIMOD", accession="UNIMOD:4", name="Carbamidomethyl"
+    )
+    modification = etree.Element(
+        "Modification", location="6", monoisotopicMassDelta="57.021464"
+    )
+    peptide_sequence = etree.Element("PeptideSequence")
+    peptide_sequence.text = "DDPHACYSTVFDK"
+    peptide = etree.Element("Peptide", id="Pep_DDPHACYSTVFDK")
+
+    results = [cv_param, modification, peptide_sequence, peptide]
+
+    cv_param_modifications = ""
+    sequence = {}
+    peptide_lookup = {}
+
+    for entry in results:
+        entry_tag = entry.tag
+        sequence, cv_param_modifications, peptide_lookup = get_peptide_lookup(
+            entry=entry,
+            entry_tag=entry_tag,
+            sequence=sequence,
+            cv_param_modifications=cv_param_modifications,
+            peptide_lookup=peptide_lookup,
+        )
+
+    assert len(peptide_lookup) == 1
+    assert peptide_lookup["Pep_DDPHACYSTVFDK"]["modifications"] == "Carbamidomethyl:6"
+    assert peptide_lookup["Pep_DDPHACYSTVFDK"]["sequence"] == "DDPHACYSTVFDK"
+    assert cv_param_modifications == ""
+
+
 def test_engine_parsers_msgfplus_get_spec_records():
     cv_param = etree.Element(
         "cvParam",
@@ -241,42 +259,23 @@ def test_engine_parsers_msgfplus_get_spec_records():
         spectrum_identification_result,
     ]
 
-    element_tag_prefix = "{http://psidev.info/psi/pi/mzIdentML/1.1}"
     obj = MSGFPlus_2021_03_22_Parser(input_file=None, params=None)
     spec_results = {}
     spec_ident_items = []
     spec_records = []
 
-    for i in results:
-        entry = i
-        entry_tag = f"{element_tag_prefix}{i.tag}"
-        spec_results, spec_ident_items, spec_records = _spec_records(
-            entry,
-            entry_tag,
-            spec_results,
-            spec_ident_items,
-            spec_records,
-            obj.mapping_dict,
+    for entry in results:
+        entry_tag = entry.tag
+        spec_results, spec_ident_items, spec_records = get_spec_records(
+            entry=entry,
+            entry_tag=entry_tag,
+            spec_results=spec_results,
+            spec_ident_items=spec_ident_items,
+            spec_records=spec_records,
+            mapping_dict=obj.mapping_dict,
         )
 
     assert len(spec_records) == 1
     assert len(spec_records[0]) == 6
     assert len(spec_ident_items) == 0
     assert spec_records[0]["exp_mz"] == "722.3272094726562"
-
-
-def test_engine_parsers_msgfplus_iterator_xml():
-    input_file = pytest._test_path / "data" / "BSA1_msgfplus_2021_03_22.mzid"
-    obj = MSGFPlus_2021_03_22_Parser(input_file=None, params=None)
-
-    version, peptide_lookup, spec_records = _iterator_xml(input_file, obj.mapping_dict)
-
-    assert version == "msgfplus_2021_03_22"
-    assert len(spec_records) == 92
-    assert len(peptide_lookup) == 24
-    assert spec_records[3]["ms-gf:evalue"] == "1.6910947E-9"
-    assert spec_records[3]["retention_time_seconds"] == "1793.826"
-    assert (
-        peptide_lookup["Pep_CCTESLVNR"]["modifications"]
-        == "Carbamidomethyl:1;Carbamidomethyl:2"
-    )
