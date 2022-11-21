@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 
-import numpy as np
 import pandas as pd
 import pytest
-from lxml import etree
 
 from pyprotista.parsers.ident.xtandem_alanine import (
     XTandemAlanine_Parser,
-    _get_single_spec_df,
+    get_xml_data,
 )
 
 
@@ -116,74 +114,6 @@ def test_engine_parsers_xtandem_check_dataframe_integrity():
         == df["sequence"].str.count("C")
     ).all()
     assert df["modifications"].str.count(":").sum() == 50
-
-
-def test_get_single_spec_df():
-    input_file = (
-        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_xtandem_alanine.xml"
-    )
-    element = etree.parse(input_file).getroot()[0]
-    ref_dict = {
-        "exp_mz": None,
-        "calc_mz": None,
-        "spectrum_title": None,
-        "raw_data_location": "path/for/glory.mgf",
-        "search_engine": "xtandem_alanine",
-        "spectrum_id": None,
-        "modifications": None,
-        "retention_time_seconds": None,
-        "x!tandem:delta": None,
-        "x!tandem:nextscore": None,
-        "x!tandem:y_score": None,
-        "x!tandem:y_ions": None,
-        "x!tandem:b_score": None,
-        "x!tandem:b_ions": None,
-        "sequence": None,
-        "charge": None,
-        "x!tandem:hyperscore": None,
-    }
-    mapping_dict = {
-        "delta": "x!tandem:delta",
-        "nextscore": "x!tandem:nextscore",
-        "y_score": "x!tandem:y_score",
-        "y_ions": "x!tandem:y_ions",
-        "b_score": "x!tandem:b_score",
-        "b_ions": "x!tandem:b_ions",
-        "seq": "sequence",
-        "z": "charge",
-        "hyperscore": "x!tandem:hyperscore",
-    }
-
-    _get_single_spec_df.reference_dict = ref_dict
-    _get_single_spec_df.mapping_dict = mapping_dict
-    result = _get_single_spec_df(etree.tostring(element))
-
-    assert isinstance(result, pd.DataFrame)
-    assert (
-        result.values
-        == np.array(
-            [
-                None,
-                None,
-                "test_Creinhardtii_QE_pH11.10381.10381.3",
-                "path/for/glory.mgf",
-                "xtandem_alanine",
-                "10381",
-                list(["15.99492:5"]),
-                None,
-                "0.0057",
-                "8.0",
-                "9.9",
-                "5",
-                "0.0",
-                "0",
-                "DDVHNMGADGIR",
-                "3",
-                "14.2",
-            ],
-            dtype=object,
-        )
-    ).all()
 
 
 def test_engine_parsers_xtandem_nterminal_mod():
@@ -376,3 +306,45 @@ def test_engine_parsers_xtandem_map_mod_names_nterm():
         "Carbamidomethyl:1",
         "Acetyl:0",
     }
+
+
+def test_engine_parsers_xtandem_get_xml_data():
+    input_file = (
+        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_xtandem_alanine.xml"
+    )
+    parser = XTandemAlanine_Parser(input_file, params=None)
+    chunks, search_engine = get_xml_data(input_file, parser.mapping_dict)
+    assert len(chunks) == 79
+    assert chunks[0] == {
+        "x!tandem:delta": "0.0057",
+        "x!tandem:hyperscore": "14.2",
+        "x!tandem:nextscore": "8.0",
+        "x!tandem:y_score": "9.9",
+        "x!tandem:y_ions": "5",
+        "x!tandem:b_score": "0.0",
+        "x!tandem:b_ions": "0",
+        "sequence": "DDVHNMGADGIR",
+        "modifications": ["15.99492:5"],
+        "calc_mz": "1315.5700",
+        "spectrum_title": "test_Creinhardtii_QE_pH11.10381.10381.3",
+        "spectrum_id": "10381",
+        "charge": "3",
+        "retention_time_seconds": "1943.05878",
+    }
+    assert chunks[70] == {
+        "x!tandem:delta": "2.022",
+        "x!tandem:hyperscore": "10.9",
+        "x!tandem:nextscore": "8.0",
+        "x!tandem:y_score": "5.0",
+        "x!tandem:y_ions": "3",
+        "x!tandem:b_score": "7.4",
+        "x!tandem:b_ions": "1",
+        "sequence": "FHVEALMHADLHFTRKHSR",
+        "modifications": ["15.99492:6"],
+        "calc_mz": "2348.183",
+        "spectrum_title": "test_Creinhardtii_QE_pH11.41649.41649.2",
+        "spectrum_id": "41649",
+        "charge": "2",
+        "retention_time_seconds": "5242.7709",
+    }
+    assert search_engine == "xtandem_alanine"

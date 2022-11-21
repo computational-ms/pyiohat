@@ -1,73 +1,75 @@
 """Engine parser."""
-import multiprocessing as mp
-from io import BytesIO
 
 import pandas as pd
 import regex as re
 from loguru import logger
-from lxml import etree
-from tqdm import tqdm
-
+import xml.etree.ElementTree as etree
 from pyprotista.parsers.ident_base_parser import IdentBaseParser
 
 
-def _mp_specs_init(func, reference_dict, mapping_dict):
-    func.reference_dict = reference_dict
-    func.mapping_dict = mapping_dict
+def get_xml_data(xml_file, mapping_dict):
+    """For loop over one xml file using xml.etree.ElementTree.iterparse.
 
-
-def _get_single_spec_df(spectrum):
-    """Primary method for reading and storing information from a single spectrum.
-
-    Attributes:
-        reference_dict (dict): dict with reference columns to be filled in
-        mapping_dict (dict): mapping of engine level column names to ursgal unified column names
+    Provide temporary variables for iteration.
+    Check for important entries to get information from.
 
     Args:
-        spectrum (xml Element): namespace of single spectrum with potentially multiple PSMs
+        xml_file (xml): input file for iterator
+        mapping_dict (dict)
 
     Returns:
-        (pd.DataFrame): dataframe containing spectrum information
-
+        chunks (list): each chunk as dict with wanted information
+        search_engine (str)
     """
-    spectrum = etree.parse(BytesIO(spectrum)).getroot()
-    spec_records = []
-    spec_level_dict = _get_single_spec_df.reference_dict.copy()
-    spec_level_info = _get_single_spec_df.mapping_dict.keys() & spectrum.attrib.keys()
-    spec_level_dict.update(
-        {
-            _get_single_spec_df.mapping_dict[k]: spectrum.attrib[k]
-            for k in spec_level_info
-        }
-    )
+    chunks = []
 
-    if "z" not in spectrum.attrib:
-        return None
-    spec_title = spectrum.findall('.//**[@label="Description"]')[0].text.split()[0]
-    spec_level_dict["spectrum_title"] = spec_title
-    spec_level_dict["spectrum_id"] = spec_title.split(".")[-3]
+    # Temporary variables, get overwritten multiple times during iteration
+    results = {}
+    domains = []
+    mods = []
+    aa_mods = []
 
-    # Iterate children
-    for psm in spectrum.findall(".//protein/*/domain"):
-        psm_level_dict = spec_level_dict.copy()
+    for event, entry in etree.iterparse(xml_file):
+        entry_tag = entry.tag
 
-        psm_level_info = _get_single_spec_df.mapping_dict.keys() & psm.attrib.keys()
-        psm_level_dict.update(
-            {_get_single_spec_df.mapping_dict[k]: psm.attrib[k] for k in psm_level_info}
-        )
-
-        # Record modifications
-        mods = []
-        for m in psm.findall(".//aa"):
-            mass, abs_pos = m.attrib["modified"], m.attrib["at"]
-            # abs pos is pos in protein, rel pos is pos in peptide
-            rel_pos = int(abs_pos) - int(psm.attrib["start"])
-            mods.append(f"{mass}:{rel_pos}")
-
-        psm_level_dict["modifications"] = mods
-
-        spec_records.append(psm_level_dict)
-    return pd.DataFrame(spec_records)
+        if entry_tag == ("aa"):
+            aa_mods.append({"mass": entry.attrib["modified"], "at": entry.attrib["at"]})
+        elif entry_tag == ("domain"):
+            for i in list(entry.attrib):
+                if i in mapping_dict:
+                    results.update({mapping_dict[i]: entry.attrib[i]})
+            for aa in aa_mods:
+                mass = aa["mass"]
+                at = aa["at"]
+                start = entry.attrib["start"]
+                rel_pos = int(at) - int(start)
+                mods.append(f"{mass}:{rel_pos}")
+            results["modifications"] = mods
+            results["calc_mz"] = entry.attrib["mh"]
+            mods = []
+            aa_mods = []
+            domains.append(results)
+            results = {}
+        elif entry_tag == ("note"):
+            if entry.attrib["label"] == "Description":
+                results.update({"spectrum_title": entry.text.split()[0]})
+                results.update({"spectrum_id": entry.text.split(".")[-3]})
+            elif entry.attrib["label"] == "process, version":
+                search_engine = (
+                    "xtandem_"
+                    + re.search(r"(?<=Tandem )\w+", entry.text).group().lower()
+                )
+        elif entry_tag == ("group"):
+            if "id" in entry.attrib:
+                for i in list(entry.attrib):
+                    if i in mapping_dict:
+                        results.update({mapping_dict[i]: entry.attrib[i]})
+                for dom in domains:
+                    dom.update(results)
+                    chunks.append(dom)
+                domains = []
+                results = {}
+    return chunks, search_engine
 
 
 class XTandemAlanine_Parser(IdentBaseParser):
@@ -82,24 +84,12 @@ class XTandemAlanine_Parser(IdentBaseParser):
         self.style = "xtandem_style_1"
         tree = etree.parse(self.input_file)
         self.root = tree.getroot()
-        self.reference_dict["search_engine"] = (
-            "xtandem_"
-            + re.search(
-                r"(?<=Tandem )\w+",
-                self.root.find(
-                    './/*[@label="performance parameters"]/*[@label="process, version"]'
-                ).text,
-            )
-            .group()
-            .lower()
-        )
         self.mapping_dict = {
             v: k
             for k, v in self.param_mapper.get_default_params(style=self.style)[
                 "header_translations"
             ]["translated_value"].items()
         }
-        self.reference_dict.update({k: None for k in self.mapping_dict.values()})
 
     @classmethod
     def check_parser_compatibility(cls, file):
@@ -180,20 +170,14 @@ class XTandemAlanine_Parser(IdentBaseParser):
         Returns:
             self.df (pd.DataFrame): unified dataframe
         """
-        self.root = [etree.tostring(e) for e in self.root]
-        logger.remove()
-        logger.add(lambda msg: tqdm.write(msg, end=""))
-        with mp.Pool(
-            self.params.get("cpus", mp.cpu_count() - 1),
-            initializer=_mp_specs_init,
-            initargs=(_get_single_spec_df, self.reference_dict, self.mapping_dict),
-        ) as pool:
-            chunk_dfs = pool.map(
-                _get_single_spec_df,
-                tqdm(self.root),
-            )
-        chunk_dfs = [df for df in chunk_dfs if not df is None]
-        self.df = pd.concat(chunk_dfs, axis=0, ignore_index=True)
+        chunks, search_engine = get_xml_data(self.input_file, self.mapping_dict)
+        self.df = pd.DataFrame(chunks)
+        self.df["search_engine"] = search_engine
+        self.df["exp_mz"] = None
+        self.df["calc_mz"] = (
+            (self.df["calc_mz"].astype(float) - self.PROTON)
+            / self.df["charge"].astype(int)
+        ) + self.PROTON
         self.df = self.map_mod_names(self.df)
         self.process_unify_style()
 
