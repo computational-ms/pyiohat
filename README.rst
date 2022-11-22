@@ -9,7 +9,7 @@ pyProtista
 .. |build-status-gh| image:: https://github.com/computational-ms/pyProtista/actions/workflows/tox_ci.yml/badge.svg
     :target: https://github.com/computational-ms/pyProtista/actions
     
-.. |versions| image:: https://img.shields.io/pypi/pyversions/pyProtista.svg
+.. image:: https://img.shields.io/pypi/pyversions/pyProtista.svg
         :target: https://pypi.python.org/pypi/pyProtista/
 
 
