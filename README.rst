@@ -3,14 +3,14 @@ pyProtista
 
 |build-status-gh| |pypi|
 
-.. image:: https://img.shields.io/pypi/pyversions/pyProtista.svg
-        :target: https://pypi.python.org/pypi/pyProtista/
-
 .. |pypi| image:: https://badge.fury.io/py/pyProtista.svg
     :target: https://badge.fury.io/py/pyProtista
 
 .. |build-status-gh| image:: https://github.com/computational-ms/pyProtista/actions/workflows/tox_ci.yml/badge.svg
     :target: https://github.com/computational-ms/pyProtista/actions
+    
+.. |versions| image:: https://img.shields.io/pypi/pyversions/pyProtista.svg
+        :target: https://pypi.python.org/pypi/pyProtista/
 
 
 Buttom up proteomics tools come with many different output formats and while some standards, like mzIdentML, mzQuantML or mzTab exist, 
