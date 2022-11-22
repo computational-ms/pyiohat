@@ -3,6 +3,9 @@ pyProtista
 
 |build-status-gh| |pypi|
 
+.. image:: https://img.shields.io/pypi/pyversions/pyProtista.svg
+        :target: https://pypi.python.org/pypi/pyProtista/
+
 .. |pypi| image:: https://badge.fury.io/py/pyProtista.svg
     :target: https://badge.fury.io/py/pyProtista
 
