@@ -7,19 +7,16 @@ import xml.etree.ElementTree as etree
 from pyprotista.parsers.ident_base_parser import IdentBaseParser
 
 
-def get_xml_data(xml_file, mapping_dict):
-    """For loop over one xml file using xml.etree.ElementTree.iterparse.
-
-    Provide temporary variables for iteration.
-    Check for important entries to get information from.
+def get_xml_data(file, mapping_dict):
+    """Iterate over file to get information on specs.
 
     Args:
-        xml_file (xml): input file for iterator
-        mapping_dict (dict)
+        file (str): path to input file
+        mapping_dict (dict): mapping of engine level column names to pyprotista unified column names
 
     Returns:
-        chunks (list): each chunk as dict with wanted information
-        search_engine (str)
+        chunks (list): spectrum information
+        search_engine (str): file version
     """
     chunks = []
 
@@ -29,7 +26,7 @@ def get_xml_data(xml_file, mapping_dict):
     mods = []
     aa_mods = []
 
-    for event, entry in etree.iterparse(xml_file):
+    for event, entry in etree.iterparse(file):
         entry_tag = entry.tag
 
         if entry_tag == ("aa"):
@@ -113,13 +110,13 @@ class XTandemAlanine_Parser(IdentBaseParser):
         return is_xml and contains_ref
 
     def map_mod_names(self, df):
-        """Map modification names in unify style.
+        """Map modifications on corresponding sequences.
 
         Args:
-            df (pd.DataFrame): input dataframe
+            df (pd.DataFrame): spectrum information
 
         Returns:
-            df (pd.DataFrame): dataframe with processed modification column
+            df (pd.DataFrame): added modification column
 
         """
         unique_mods = set().union(*df["modifications"].apply(set).values)

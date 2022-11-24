@@ -3,23 +3,20 @@ import pandas as pd
 import regex as re
 import xml.etree.ElementTree as etree
 from pyprotista.parsers.ident_base_parser import IdentBaseParser
-import warnings
+from loguru import logger
 
 
-def get_xml_data(xml_file, mapping_dict):
-    """For loop over one xml file using xml.etree.ElementTree.iterparse.
-
-    Provide temporary variables for iteration.
-    Call functions get_peptide_lookup in stage 1 and get_spec_records in stage 2.
+def get_xml_data(file, mapping_dict):
+    """Iterate over file to get information on specs.
 
     Args:
-        xml_file (mzid): input file
-        mapping_dict (dict)
+        file (str): path to input file
+        mapping_dict (dict): mapping of engine level column names to pyprotista unified column names
 
     Returns:
-        version (str): contains the version of the mzid
-        peptide_lookup (dict): contains all the peptides with their sequences and modifications
-        spec_records (list): list of dicts containing single_specs
+        version (str): file version
+        peptide_lookup (dict): peptide id with corresponding modifications and sequence
+        spec_records (list): spectrum information
     """
     version = ""
     peptide_lookup = {}
@@ -32,7 +29,7 @@ def get_xml_data(xml_file, mapping_dict):
     spec_results = {}
     spec_ident_items = []
 
-    for event, entry in etree.iterparse(xml_file):
+    for event, entry in etree.iterparse(file):
         entry_tag = entry.tag
         if entry_tag.endswith("PeptideEvidence"):
             # Back to 0, so no cvParam gets written
@@ -64,10 +61,9 @@ def get_xml_data(xml_file, mapping_dict):
             )
         elif entry_tag.endswith("cvList"):
             if entry_tag != "{http://psidev.info/psi/pi/mzIdentML/1.1}cvList":
-                warnings.warn(
+                logger.warning(
                     "Wrong mzIdentML format - Parser might not operate correctly!"
                 )
-        # RAM saver
         entry.clear()
         if entry_tag.endswith("SpectrumIdentificationList"):
             return version, peptide_lookup, spec_records
@@ -76,19 +72,19 @@ def get_xml_data(xml_file, mapping_dict):
 def get_peptide_lookup(
     entry, entry_tag, sequence, cv_param_modifications, peptide_lookup
 ):
-    """Take one entry at a time to return peptides with their sequences and modifications.
+    """Take one entry at a time to get peptide ids with their corresponding sequences and modifications.
 
     Args:
-        entry (element) : current xml element
-        entry_tag (element.tag): was assigned earlier
-        sequence (dict): variable from get_xml_data that gets updated
-        cv_param_modifications (str): variable from get_xml_data that gets appended
-        peptide_lookup (dict): variable from get_xml_data that gets updated
+        entry (element): xml element
+        entry_tag (element.tag): xml tag
+        sequence (dict): current sequence
+        cv_param_modifications (str): modifications of corresponding sequence
+        peptide_lookup (dict): peptide id with corresponding modifications and sequence
 
     Returns:
-        sequence (dict): temporary assigned
+        sequence (dict): current sequence
         cv_paparam_modifications (str): temporary assigned
-        peptide_lookup (dict): updated dict with one more peptide
+        peptide_lookup (dict): peptide id with corresponding modifications and sequence
     """
     if entry_tag.endswith("PeptideSequence"):
         sequence = {"sequence": entry.text}
@@ -111,20 +107,20 @@ def get_peptide_lookup(
 def get_spec_records(
     entry, entry_tag, spec_ident_items, spec_results, spec_records, mapping_dict
 ):
-    """Take one entry at a time to return peptides with their sequences and modifications.
+    """Take one entry at a time to get single specs.
 
     Args:
-        entry (element) : current xml element
-        entry_tag (element.tag): was assigned earlier
-        spec_ident_items (list): contains all spectrum_identification_items from one spectrum_identification_result
-        spec_results (dict): contains temporary spec information
-        spec_records (dict): contains all SpectrumIdentificationResult information
-        mapping_dict (dict): contains information on which attributes to keep
+        entry (element) : xml element
+        entry_tag (str): xml tag
+        spec_ident_items (list): potentially multiple PSMs
+        spec_results (dict): single PSM
+        spec_records (list): information on PSMs
+        mapping_dict (dict): mapping of engine level column names to pyprotista unified column names
 
     Returns:
-        spec_results (dict): contains temporary spec information
-        spec_ident_items (list): contains all spectrum_identification_items from one spectrum_identification_result
-        spec_records (dict): updated with more specs
+        spec_results (dict): single PSM
+        spec_ident_items (list): potentially multiple PSMs
+        spec_records (list): information on PSMs
     """
     if entry_tag.endswith("cvParam") or entry_tag.endswith("userParam"):
         if entry.attrib["name"] in mapping_dict:
