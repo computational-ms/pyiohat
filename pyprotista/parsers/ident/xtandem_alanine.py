@@ -1,26 +1,27 @@
 """Engine parser."""
 
+import xml.etree.ElementTree as etree
+
 import pandas as pd
 import regex as re
 from loguru import logger
-import xml.etree.ElementTree as etree
+
 from pyprotista.parsers.ident_base_parser import IdentBaseParser
 
 
-def get_xml_data(file, mapping_dict):
-    """Iterate over file to get information on specs.
+def get_spec_records(file, mapping_dict):
+    """Retrieve specs and search_engine from file.
 
     Args:
         file (str): path to input file
         mapping_dict (dict): mapping of engine level column names to pyprotista unified column names
 
     Returns:
-        chunks (list): spectrum information
+        spec_records (list): information on PSMs
         search_engine (str): file version
     """
-    chunks = []
+    spec_records = []
 
-    # Temporary variables, get overwritten multiple times during iteration
     results = {}
     domains = []
     mods = []
@@ -32,9 +33,9 @@ def get_xml_data(file, mapping_dict):
         if entry_tag == ("aa"):
             aa_mods.append({"mass": entry.attrib["modified"], "at": entry.attrib["at"]})
         elif entry_tag == ("domain"):
-            for i in list(entry.attrib):
-                if i in mapping_dict:
-                    results.update({mapping_dict[i]: entry.attrib[i]})
+            for attrib in list(entry.attrib):
+                if attrib in mapping_dict:
+                    results.update({mapping_dict[attrib]: entry.attrib[attrib]})
             for aa in aa_mods:
                 mass = aa["mass"]
                 at = aa["at"]
@@ -58,15 +59,15 @@ def get_xml_data(file, mapping_dict):
                 )
         elif entry_tag == ("group"):
             if "id" in entry.attrib:
-                for i in list(entry.attrib):
-                    if i in mapping_dict:
-                        results.update({mapping_dict[i]: entry.attrib[i]})
+                for attrib in list(entry.attrib):
+                    if attrib in mapping_dict:
+                        results.update({mapping_dict[attrib]: entry.attrib[attrib]})
                 for dom in domains:
                     dom.update(results)
-                    chunks.append(dom)
+                    spec_records.append(dom)
                 domains = []
                 results = {}
-    return chunks, search_engine
+    return spec_records, search_engine
 
 
 class XTandemAlanine_Parser(IdentBaseParser):
@@ -113,10 +114,10 @@ class XTandemAlanine_Parser(IdentBaseParser):
         """Map modifications on corresponding sequences.
 
         Args:
-            df (pd.DataFrame): spectrum information
+            df (pd.DataFrame): input dataframe
 
         Returns:
-            df (pd.DataFrame): added modification column
+            df (pd.DataFrame): dataframe with processed modification column
 
         """
         unique_mods = set().union(*df["modifications"].apply(set).values)
@@ -167,8 +168,10 @@ class XTandemAlanine_Parser(IdentBaseParser):
         Returns:
             self.df (pd.DataFrame): unified dataframe
         """
-        chunks, search_engine = get_xml_data(self.input_file, self.mapping_dict)
-        self.df = pd.DataFrame(chunks)
+        spec_records, search_engine = get_spec_records(
+            self.input_file, self.mapping_dict
+        )
+        self.df = pd.DataFrame(spec_records)
         self.df["search_engine"] = search_engine
         self.df["exp_mz"] = None
         self.df["calc_mz"] = (

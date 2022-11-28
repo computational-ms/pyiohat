@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 
 import pytest
-import xml.etree.ElementTree as etree
 
 from pyprotista.parsers.ident.msgfplus_2021_03_22_parser import (
     MSGFPlus_2021_03_22_Parser,
-    get_xml_data,
+    get_version,
     get_peptide_lookup,
     get_spec_records,
 )
@@ -175,107 +174,121 @@ def test_engine_parsers_msgfplus_check_dataframe_integrity_unknown_mod():
     assert df["modifications"].str.count(":").sum() == 71
 
 
-def test_engine_parsers_msgfplus_get_xml_data():
+def test_engine_parsers_msgfplus_get_version():
     input_file = pytest._test_path / "data" / "BSA1_msgfplus_2021_03_22.mzid"
-    obj = MSGFPlus_2021_03_22_Parser(input_file=None, params=None)
-
-    version, peptide_lookup, spec_records = get_xml_data(input_file, obj.mapping_dict)
+    version = get_version(input_file)
 
     assert version == "msgfplus_2021_03_22"
-    assert len(spec_records) == 92
-    assert len(peptide_lookup) == 24
-    assert spec_records[3]["ms-gf:evalue"] == "1.6910947E-9"
-    assert spec_records[3]["retention_time_seconds"] == "1793.826"
-    assert (
-        peptide_lookup["Pep_CCTESLVNR"]["modifications"]
-        == "Carbamidomethyl:1;Carbamidomethyl:2"
-    )
 
 
 def test_engine_parsers_msgfplus_get_peptide_lookup():
+    input_file = pytest._test_path / "data" / "BSA1_msgfplus_2021_03_22.mzid"
+    peptide_lookup = get_peptide_lookup(input_file)
 
-    cv_param = etree.Element(
-        "cvParam", cvRef="UNIMOD", accession="UNIMOD:4", name="Carbamidomethyl"
-    )
-    modification = etree.Element(
-        "Modification", location="6", monoisotopicMassDelta="57.021464"
-    )
-    peptide_sequence = etree.Element("PeptideSequence")
-    peptide_sequence.text = "DDPHACYSTVFDK"
-    peptide = etree.Element("Peptide", id="Pep_DDPHACYSTVFDK")
-
-    results = [cv_param, modification, peptide_sequence, peptide]
-
-    cv_param_modifications = ""
-    sequence = {}
-    peptide_lookup = {}
-
-    for entry in results:
-        entry_tag = entry.tag
-        sequence, cv_param_modifications, peptide_lookup = get_peptide_lookup(
-            entry=entry,
-            entry_tag=entry_tag,
-            sequence=sequence,
-            cv_param_modifications=cv_param_modifications,
-            peptide_lookup=peptide_lookup,
-        )
-
-    assert len(peptide_lookup) == 1
-    assert peptide_lookup["Pep_DDPHACYSTVFDK"]["modifications"] == "Carbamidomethyl:6"
-    assert peptide_lookup["Pep_DDPHACYSTVFDK"]["sequence"] == "DDPHACYSTVFDK"
-    assert cv_param_modifications == ""
+    assert len(peptide_lookup) == 24
+    for pep in peptide_lookup:
+        assert len(peptide_lookup[pep]) == 2
+        assert pep.startswith("Pep_")
+    assert peptide_lookup["Pep_LVTDLTK"] == {"sequence": "LVTDLTK", "modifications": ""}
+    assert peptide_lookup["Pep_LVVSTQTALA"] == {
+        "sequence": "LVVSTQTALA",
+        "modifications": "",
+    }
 
 
 def test_engine_parsers_msgfplus_get_spec_records():
-    cv_param = etree.Element(
-        "cvParam",
-        cvRef="PSI-MS",
-        accession="MS:1002049",
-        name="MS-GF:RawScore",
-        value="40",
-    )
-    user_param = etree.Element("userParam", name="NumMatchedMainIons", value="3")
-    spectrum_identification_item = etree.Element(
-        "SpectrumIdentificationItem",
-        chargeState="2",
-        experimentalMassToCharge="722.3272094726562",
-        calculatedMassToCharge="722.3246459960938",
-        peptide_ref="Pep_YICDNQDTISSK",
-        rank="1",
-        passThreshold="true",
-        id="SII_350_1",
-    )
-    spectrum_identification_result = etree.Element(
-        "SpectrumIdentificationResult",
-        spectrumID="index=349",
-        spectraData_ref="SID_1",
-        id="SIR_350",
-    )
-
-    results = [
-        cv_param,
-        user_param,
-        spectrum_identification_item,
-        spectrum_identification_result,
-    ]
-
+    input_file = pytest._test_path / "data" / "BSA1_msgfplus_2021_03_22.mzid"
     obj = MSGFPlus_2021_03_22_Parser(input_file=None, params=None)
-    spec_results = {}
-    spec_ident_items = []
-    spec_records = []
+    peptide_lookup = {
+        "Pep_YICDNQDTISSK": {
+            "sequence": "YICDNQDTISSK",
+            "modifications": "Carbamidomethyl:3",
+        },
+        "Pep_CCTESLVNR": {
+            "sequence": "CCTESLVNR",
+            "modifications": "Carbamidomethyl:1;Carbamidomethyl:2",
+        },
+        "Pep_EYEATLEECCAK": {
+            "sequence": "EYEATLEECCAK",
+            "modifications": "Carbamidomethyl:9;Carbamidomethyl:10",
+        },
+        "Pep_ETYGDMADCCEK": {
+            "sequence": "ETYGDMADCCEK",
+            "modifications": "Carbamidomethyl:9;Carbamidomethyl:10",
+        },
+        "Pep_EACFAVEGPK": {
+            "sequence": "EACFAVEGPK",
+            "modifications": "Carbamidomethyl:3",
+        },
+        "Pep_DDSPDLPK": {"sequence": "DDSPDLPK", "modifications": ""},
+        "Pep_ECCDKPLLEK": {
+            "sequence": "ECCDKPLLEK",
+            "modifications": "Carbamidomethyl:2;Carbamidomethyl:3",
+        },
+        "Pep_HLVDEPQNLIK": {"sequence": "HLVDEPQNLIK", "modifications": ""},
+        "Pep_DLGEEHFK": {"sequence": "DLGEEHFK", "modifications": ""},
+        "Pep_DDPHACYSTVFDK": {
+            "sequence": "DDPHACYSTVFDK",
+            "modifications": "Carbamidomethyl:6",
+        },
+        "Pep_AEFVEVTK": {"sequence": "AEFVEVTK", "modifications": ""},
+        "Pep_YLYEIAR": {"sequence": "YLYEIAR", "modifications": ""},
+        "Pep_LCVLHEK": {"sequence": "LCVLHEK", "modifications": "Carbamidomethyl:2"},
+        "Pep_LVTDLTK": {"sequence": "LVTDLTK", "modifications": ""},
+        "Pep_YNGVFQECCQAEDK": {
+            "sequence": "YNGVFQECCQAEDK",
+            "modifications": "Carbamidomethyl:8;Carbamidomethyl:9",
+        },
+        "Pep_LKPDPNTLCDEFK": {
+            "sequence": "LKPDPNTLCDEFK",
+            "modifications": "Carbamidomethyl:9",
+        },
+        "Pep_SHCIAEVEK": {
+            "sequence": "SHCIAEVEK",
+            "modifications": "Carbamidomethyl:3",
+        },
+        "Pep_QEPERNECFLSHK": {
+            "sequence": "QEPERNECFLSHK",
+            "modifications": "Carbamidomethyl:8",
+        },
+        "Pep_VPQVSTPTLVEVSR": {"sequence": "VPQVSTPTLVEVSR", "modifications": ""},
+        "Pep_LVVSTQTALA": {"sequence": "LVVSTQTALA", "modifications": ""},
+        "Pep_AWSVAR": {"sequence": "AWSVAR", "modifications": ""},
+        "Pep_GACLLPK": {"sequence": "GACLLPK", "modifications": "Carbamidomethyl:3"},
+        "Pep_YLYEIARR": {"sequence": "YLYEIARR", "modifications": ""},
+        "Pep_LGEYGFQNALIVR": {"sequence": "LGEYGFQNALIVR", "modifications": ""},
+    }
 
-    for entry in results:
-        entry_tag = entry.tag
-        spec_results, spec_ident_items, spec_records = get_spec_records(
-            entry=entry,
-            entry_tag=entry_tag,
-            spec_results=spec_results,
-            spec_ident_items=spec_ident_items,
-            spec_records=spec_records,
-            mapping_dict=obj.mapping_dict,
-        )
+    spec_records = get_spec_records(input_file, peptide_lookup, obj.mapping_dict)
 
-    assert len(spec_records) == 1
-    assert len(spec_records[0]) == 6
-    assert len(spec_ident_items) == 0
-    assert spec_records[0]["exp_mz"] == "722.3272094726562"
+    assert len(spec_records) == 92
+    assert spec_records[0] == {
+        "ms-gf:raw_score": "40",
+        "ms-gf:denovoscore": "40",
+        "ms-gf:spec_evalue": "4.4458354E-15",
+        "ms-gf:evalue": "2.6986221E-12",
+        "ms-gf:num_matched_ions": "3",
+        "charge": "2",
+        "exp_mz": "722.3272094726562",
+        "calc_mz": "722.3246459960938",
+        "sequence": "YICDNQDTISSK",
+        "modifications": "Carbamidomethyl:3",
+        "spectrum_title": "glory.2791.2791.2",
+        "spectrum_id": "2791",
+        "retention_time_seconds": "1918.6086",
+    }
+    assert spec_records[44] == {
+        "ms-gf:raw_score": "26",
+        "ms-gf:denovoscore": "32",
+        "ms-gf:spec_evalue": "2.2523169E-8",
+        "ms-gf:evalue": "1.36715635E-5",
+        "ms-gf:num_matched_ions": "1",
+        "charge": "3",
+        "exp_mz": "325.4911804199219",
+        "calc_mz": "325.4907531738281",
+        "sequence": "DLGEEHFK",
+        "modifications": "",
+        "spectrum_title": "glory.mzML.2663.2663.3",
+        "spectrum_id": "2663",
+        "retention_time_seconds": "1840.7933333333335",
+    }

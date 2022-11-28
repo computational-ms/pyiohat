@@ -1,11 +1,10 @@
 #!/usr/bin/env python
-
 import pandas as pd
 import pytest
 
 from pyprotista.parsers.ident.xtandem_alanine import (
     XTandemAlanine_Parser,
-    get_xml_data,
+    get_spec_records,
 )
 
 
@@ -308,14 +307,15 @@ def test_engine_parsers_xtandem_map_mod_names_nterm():
     }
 
 
-def test_engine_parsers_xtandem_get_xml_data():
+def test_engine_parsers_xtandem_get_spec_records():
     input_file = (
         pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_xtandem_alanine.xml"
     )
     parser = XTandemAlanine_Parser(input_file, params=None)
-    chunks, search_engine = get_xml_data(input_file, parser.mapping_dict)
-    assert len(chunks) == 79
-    assert chunks[0] == {
+    spec_records, search_engine = get_spec_records(input_file, parser.mapping_dict)
+
+    assert len(spec_records) == 79
+    assert spec_records[0] == {
         "x!tandem:delta": "0.0057",
         "x!tandem:hyperscore": "14.2",
         "x!tandem:nextscore": "8.0",
@@ -331,7 +331,7 @@ def test_engine_parsers_xtandem_get_xml_data():
         "charge": "3",
         "retention_time_seconds": "1943.05878",
     }
-    assert chunks[70] == {
+    assert spec_records[70] == {
         "x!tandem:delta": "2.022",
         "x!tandem:hyperscore": "10.9",
         "x!tandem:nextscore": "8.0",
