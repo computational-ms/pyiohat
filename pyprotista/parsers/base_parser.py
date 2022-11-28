@@ -1,10 +1,12 @@
 """Parser handler."""
 import json
 from pathlib import Path
+import csv
 
 import pandas as pd
 import uparma
 from chemical_composition import ChemicalComposition
+from unimod_mapper.unimod_mapper import UnimodMapper
 from loguru import logger
 
 
@@ -26,6 +28,11 @@ class BaseParser:
         self.params = params
         self.xml_file_list = self.params.get("xml_file_list", None)
         self.param_mapper = uparma.UParma()
+        self.mod_mapper = UnimodMapper(xml_file_list=self.xml_file_list)
+        self.params["mapped_mods"] = self.mod_mapper.map_mods(
+            mod_list=self.params.get("modifications", [])
+        )
+        self.mod_dict = self._create_mod_dicts()
         self.cc = ChemicalComposition(
             unimod_file_list=self.params.get("xml_file_list", None)
         )
@@ -53,6 +60,59 @@ class BaseParser:
             model_definition.extend(json.load(jf))
         model_definition = {item["name"]: item["dtype"] for item in model_definition}
         return model_definition
+
+    def _create_mod_dicts(self):
+        """
+        Create dict containing meta information about static and variable mods.
+
+        Returns:
+            mod_dict (dict): mapped modifications and information
+        """
+        mod_dict = {}
+        for mod_type in ["fix", "opt"]:
+            for modification in self.params["mapped_mods"][mod_type]:
+                aa = modification["aa"]
+                pos = modification["position"]
+                name = modification["name"]
+                if name not in mod_dict.keys():
+                    mod_dict[name] = {
+                        "mass": modification["mass"],
+                        "aa": set(),
+                        "position": set(),
+                    }
+                mod_dict[name]["aa"].add(aa)
+
+                mod_dict[name]["aa"].add(pos)
+                mod_dict[name]["position"].add(pos)
+
+        return mod_dict
+
+    def _read_meta_info_lookup_file(self):
+        """Read meta info lookup file.
+
+        Returns:
+            rt_lookup (dict of int: dict): dict with spectrum ids as top level key
+                                           values are new dicts with all rt values as keys
+                                           values are lists with [file, precursor_mz]
+        """
+        rt_lookup = {}
+        with open(self.params["rt_pickle_name"], mode="r") as meta_csv:
+            meta_reader = csv.DictReader(meta_csv)
+            for row in meta_reader:
+                rt = float(row["rt"])
+                if row["rt_unit"] == "minute" or row["rt_unit"] == "min":
+                    rt *= 60.0
+                if int(row["spectrum_id"]) not in rt_lookup:
+                    rt_lookup[int(row["spectrum_id"])] = {}
+                if row["precursor_mz"] == "":
+                    precursor_mz = np.nan
+                else:
+                    precursor_mz = float(row["precursor_mz"])
+                rt_lookup[int(row["spectrum_id"])][rt] = [
+                    row["file"],
+                    precursor_mz,
+                ]
+        return rt_lookup
 
     def sanitize(self):
         """Perform dataframe sanitation steps.

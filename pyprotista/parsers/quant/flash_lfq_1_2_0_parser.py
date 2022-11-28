@@ -3,8 +3,10 @@ import re
 from pathlib import Path
 
 import pandas as pd
+from chemical_composition import ChemicalComposition
 
 from pyprotista.parsers.quant_base_parser import QuantBaseParser
+from pyprotista.parsers.misc import get_compositions_and_monoisotopic_masses
 
 
 class FlashLFQ_1_2_0_Parser(QuantBaseParser):
@@ -25,6 +27,23 @@ class FlashLFQ_1_2_0_Parser(QuantBaseParser):
         }
         self.df = pd.read_csv(self.input_file, delimiter="\t")
         self.df.rename(columns=self.mapping_dict, inplace=True)
+        self.round_precision = 5
+
+        self.rt_to_spec_id = {}
+        self.filestem_to_path = {}
+        for key, val in self.rt_lookup.items():
+            for key2, val2 in val.items():
+                self.rt_to_spec_id.setdefault(val2[0], {})[
+                    round(key2, self.round_precision)
+                ] = key
+                if val2[0] not in self.filestem_to_path:
+                    self.filestem_to_path[Path(val2[0]).stem] = val2[0]
+
+            # round(list(d.keys())[0], self.round_precision): key
+            # for key, d in self.rt_lookup.items()
+        # }
+        self.cc = ChemicalComposition()
+        self.IUPAC_AAS = tuple("ACDEFGHIKLMNPQRSTUVWY")
 
     @classmethod
     def check_parser_compatibility(cls, file):
@@ -76,23 +95,52 @@ class FlashLFQ_1_2_0_Parser(QuantBaseParser):
         # TODO: fill this
         # raise NotImplementedError
         # do column conversion here
-        # breakpoint()
         self.df["spectrum_id"] = -1
         self.df["linked_spectrum_id"] = -1
-        self.df["raw_quant_value"] = -1
-        self.df["fwhm"] = ""
+        self.df["retention_time_seconds"] = -1
+        self.df["accuracy_ppm_C12"] = -1
+        self.df["quant_score"] = -1
+        self.df["fwhm"] = -1
         self.df["label"] = "LabelFree"
-        self.df["condition"] = self.df["raw_filename"]
-        self.df["raw_filename"] = self.df["raw_filename"].map(
-            lambda x: Path(self.params.get("raw_data_location", "")) / Path(x).stem
-        )
         self.df["quant_group"] = ""
-        self.df["score"] = ""
-        self.df["processing_level"] = "ChromatographicPeak"
+
+        self.get_chemical_composition()
+        self.get_meta_info()
         self.df["quant_run_id"] = "FlashLFQ"
-        self.df["coalescence"] = ""
+
         self.process_unify_style()
         return self.df
+
+    def get_meta_info(self):
+        self.df["raw_filename"] = self.df["raw_filename"].map(self.filestem_to_path)
+        rounded_rts = (self.df["flashlfq:ms2_retention_time"] / 60).apply(
+            round, args=(self.round_precision,)
+        )
+        rounded_rts = pd.DataFrame({"file": self.df["raw_filename"], "rt": rounded_rts})
+
+        self.df["linked_spectrum_id"] = [
+            self.rt_to_spec_id[f][r] for i, (f, r) in rounded_rts.iterrows()
+        ]
+
+    def get_chemical_composition(self):
+        mods = self.df["flashlfq:full_sequence"].apply(self.translate_mods)
+        seqs = self.df["trivial_name"]
+
+        # move to base parser?
+        all_compositions = {}
+        for aa in self.IUPAC_AAS:
+            self.cc.use(sequence=aa)
+            all_compositions[aa] = self.cc.copy()
+        for mod in self.mod_dict.keys():
+            all_compositions[mod] = self.mod_mapper.name_to_composition(mod)[0]
+
+        compositions, mono_masses = get_compositions_and_monoisotopic_masses(
+            sequences=seqs.to_numpy(dtype=str),
+            modifications=mods.to_numpy(dtype=str),
+            compositions=all_compositions,
+            isotopic_distributions=self.cc.isotopic_distributions,
+        )
+        self.df.loc[:, "chemical_composition"] = compositions
 
     def translate_mods(self, full_sequence):
         """Extract modifications from full_sequence and format as {mod_1}:{pos_1};{mod_n}:{pos_n}.
