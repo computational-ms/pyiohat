@@ -1,12 +1,8 @@
 #!/usr/bin/env python
-
 import pytest
 
 from pyprotista.parsers.ident.msgfplus_2021_03_22_parser import (
     MSGFPlus_2021_03_22_Parser,
-    get_version,
-    get_peptide_lookup,
-    get_spec_records,
 )
 
 
@@ -176,14 +172,16 @@ def test_engine_parsers_msgfplus_check_dataframe_integrity_unknown_mod():
 
 def test_engine_parsers_msgfplus_get_version():
     input_file = pytest._test_path / "data" / "BSA1_msgfplus_2021_03_22.mzid"
-    version = get_version(input_file)
+    parser = MSGFPlus_2021_03_22_Parser(input_file=input_file, params=None)
+    version = parser.get_version()
 
     assert version == "msgfplus_2021_03_22"
 
 
 def test_engine_parsers_msgfplus_get_peptide_lookup():
     input_file = pytest._test_path / "data" / "BSA1_msgfplus_2021_03_22.mzid"
-    peptide_lookup = get_peptide_lookup(input_file)
+    parser = MSGFPlus_2021_03_22_Parser(input_file=input_file, params=None)
+    peptide_lookup = parser.get_peptide_lookup()
 
     assert len(peptide_lookup) == 24
     for pep in peptide_lookup:
@@ -198,68 +196,9 @@ def test_engine_parsers_msgfplus_get_peptide_lookup():
 
 def test_engine_parsers_msgfplus_get_spec_records():
     input_file = pytest._test_path / "data" / "BSA1_msgfplus_2021_03_22.mzid"
-    obj = MSGFPlus_2021_03_22_Parser(input_file=None, params=None)
-    peptide_lookup = {
-        "Pep_YICDNQDTISSK": {
-            "sequence": "YICDNQDTISSK",
-            "modifications": "Carbamidomethyl:3",
-        },
-        "Pep_CCTESLVNR": {
-            "sequence": "CCTESLVNR",
-            "modifications": "Carbamidomethyl:1;Carbamidomethyl:2",
-        },
-        "Pep_EYEATLEECCAK": {
-            "sequence": "EYEATLEECCAK",
-            "modifications": "Carbamidomethyl:9;Carbamidomethyl:10",
-        },
-        "Pep_ETYGDMADCCEK": {
-            "sequence": "ETYGDMADCCEK",
-            "modifications": "Carbamidomethyl:9;Carbamidomethyl:10",
-        },
-        "Pep_EACFAVEGPK": {
-            "sequence": "EACFAVEGPK",
-            "modifications": "Carbamidomethyl:3",
-        },
-        "Pep_DDSPDLPK": {"sequence": "DDSPDLPK", "modifications": ""},
-        "Pep_ECCDKPLLEK": {
-            "sequence": "ECCDKPLLEK",
-            "modifications": "Carbamidomethyl:2;Carbamidomethyl:3",
-        },
-        "Pep_HLVDEPQNLIK": {"sequence": "HLVDEPQNLIK", "modifications": ""},
-        "Pep_DLGEEHFK": {"sequence": "DLGEEHFK", "modifications": ""},
-        "Pep_DDPHACYSTVFDK": {
-            "sequence": "DDPHACYSTVFDK",
-            "modifications": "Carbamidomethyl:6",
-        },
-        "Pep_AEFVEVTK": {"sequence": "AEFVEVTK", "modifications": ""},
-        "Pep_YLYEIAR": {"sequence": "YLYEIAR", "modifications": ""},
-        "Pep_LCVLHEK": {"sequence": "LCVLHEK", "modifications": "Carbamidomethyl:2"},
-        "Pep_LVTDLTK": {"sequence": "LVTDLTK", "modifications": ""},
-        "Pep_YNGVFQECCQAEDK": {
-            "sequence": "YNGVFQECCQAEDK",
-            "modifications": "Carbamidomethyl:8;Carbamidomethyl:9",
-        },
-        "Pep_LKPDPNTLCDEFK": {
-            "sequence": "LKPDPNTLCDEFK",
-            "modifications": "Carbamidomethyl:9",
-        },
-        "Pep_SHCIAEVEK": {
-            "sequence": "SHCIAEVEK",
-            "modifications": "Carbamidomethyl:3",
-        },
-        "Pep_QEPERNECFLSHK": {
-            "sequence": "QEPERNECFLSHK",
-            "modifications": "Carbamidomethyl:8",
-        },
-        "Pep_VPQVSTPTLVEVSR": {"sequence": "VPQVSTPTLVEVSR", "modifications": ""},
-        "Pep_LVVSTQTALA": {"sequence": "LVVSTQTALA", "modifications": ""},
-        "Pep_AWSVAR": {"sequence": "AWSVAR", "modifications": ""},
-        "Pep_GACLLPK": {"sequence": "GACLLPK", "modifications": "Carbamidomethyl:3"},
-        "Pep_YLYEIARR": {"sequence": "YLYEIARR", "modifications": ""},
-        "Pep_LGEYGFQNALIVR": {"sequence": "LGEYGFQNALIVR", "modifications": ""},
-    }
-
-    spec_records = get_spec_records(input_file, peptide_lookup, obj.mapping_dict)
+    parser = MSGFPlus_2021_03_22_Parser(input_file=input_file, params=None)
+    parser.peptide_lookup = parser.get_peptide_lookup()
+    spec_records = parser.get_spec_records()
 
     assert len(spec_records) == 92
     assert spec_records[0] == {

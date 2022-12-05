@@ -3,11 +3,6 @@ import pytest
 
 from pyprotista.parsers.ident.comet_2020_01_4_parser import (
     Comet_2020_01_4_Parser,
-    map_mod_mass,
-    get_version,
-    get_peptide_lookup,
-    get_spec_records,
-    map_mods_sequences,
 )
 
 
@@ -109,13 +104,15 @@ def test_engine_parsers_comet_check_dataframe_integrity():
 
 def test_engine_parsers_comet_get_version():
     input_file = pytest._test_path / "data" / "BSA1_comet_2020_01_4.mzid"
-    version = get_version(file=input_file)
+    parser = Comet_2020_01_4_Parser(input_file, params=None)
+    version = parser.get_version()
     assert version == "comet_2020_01_4"
 
 
 def test_engine_parser_comet_map_mod_mass():
     input_file = pytest._test_path / "data" / "BSA1_comet_2020_01_4.mzid"
-    fixed_mods, modifications = map_mod_mass(input_file)
+    parser = Comet_2020_01_4_Parser(input_file=input_file, params=None)
+    fixed_mods, modifications = parser.map_mod_mass()
     assert fixed_mods == {"C": "Carbamidomethyl"}
     assert modifications == {
         "57.021464": "Carbamidomethyl",
@@ -126,13 +123,9 @@ def test_engine_parser_comet_map_mod_mass():
 
 def test_engine_parsers_comet_get_peptide_lookup():
     input_file = pytest._test_path / "data" / "BSA1_comet_2020_01_4.mzid"
-    fixed_mods = {"C": "Carbamidomethyl"}
-    modifications = {
-        "57.021464": "Carbamidomethyl",
-        "15.994915": "Oxidation",
-        "42.010565": "Acetyl",
-    }
-    peptide_lookup = get_peptide_lookup(input_file, fixed_mods, modifications)
+    parser = Comet_2020_01_4_Parser(input_file=input_file, params=None)
+    parser.fixed_mods, parser.mod_mass_map = parser.map_mod_mass()
+    peptide_lookup = parser.get_peptide_lookup()
     assert len(peptide_lookup) == 24
     assert "EACFAVEGPK;10:42.010565;" in peptide_lookup.keys()
     assert peptide_lookup["LVTDLTK;"] == ("", "LVTDLTK")
@@ -140,35 +133,10 @@ def test_engine_parsers_comet_get_peptide_lookup():
 
 def test_engine_parsers_comet_get_spec_records():
     input_file = pytest._test_path / "data" / "BSA1_comet_2020_01_4.mzid"
-    obj = Comet_2020_01_4_Parser(input_file=None, params=None)
-    peptide_lookup = {
-        "AEFVEVTK;": ("", "AEFVEVTK"),
-        "AWSVAR;": ("", "AWSVAR"),
-        "CCTESLVNR;": ("Carbamidomethyl:1;Carbamidomethyl:2", "CCTESLVNR"),
-        "DDSPDLPK;": ("", "DDSPDLPK"),
-        "DLGEEHFK;": ("", "DLGEEHFK"),
-        "DLGEEHFK;8:42.010565;": ("Acetyl:0", "DLGEEHFK"),
-        "EACFAVEGPK;": ("Carbamidomethyl:3", "EACFAVEGPK"),
-        "EACFAVEGPK;10:42.010565;": ("Carbamidomethyl:3;Acetyl:0", "EACFAVEGPK"),
-        "ECCDKPLLEK;": ("Carbamidomethyl:2;Carbamidomethyl:3", "ECCDKPLLEK"),
-        "GACLLPK;": ("Carbamidomethyl:3", "GACLLPK"),
-        "HLVDEPQNLIK;": ("", "HLVDEPQNLIK"),
-        "LCVLHEK;": ("Carbamidomethyl:2", "LCVLHEK"),
-        "LGEYGFQNALIVR;": ("", "LGEYGFQNALIVR"),
-        "LKPDPNTLCDEFK;": ("Carbamidomethyl:9", "LKPDPNTLCDEFK"),
-        "LRCASIQK;8:42.010565;": ("Carbamidomethyl:3;Acetyl:0", "LRCASIQK"),
-        "LVTDLTK;": ("", "LVTDLTK"),
-        "LVTDLTK;7:42.010565;": ("Acetyl:0", "LVTDLTK"),
-        "LVVSTQTALA;": ("", "LVVSTQTALA"),
-        "QEPERNECFLSHK;": ("Carbamidomethyl:8", "QEPERNECFLSHK"),
-        "SHCIAEVEK;": ("Carbamidomethyl:3", "SHCIAEVEK"),
-        "VPQVSTPTLVEVSR;": ("", "VPQVSTPTLVEVSR"),
-        "YICDNQDTISSK;": ("Carbamidomethyl:3", "YICDNQDTISSK"),
-        "YLYEIAR;": ("", "YLYEIAR"),
-        "YLYEIARR;": ("", "YLYEIARR"),
-    }
-
-    spec_records = get_spec_records(input_file, obj.mapping_dict, peptide_lookup)
+    parser = Comet_2020_01_4_Parser(input_file=input_file, params=None)
+    parser.fixed_mods, parser.mod_mass_map = parser.map_mod_mass()
+    parser.peptide_lookup = parser.get_peptide_lookup()
+    spec_records = parser.get_spec_records()
 
     assert len(spec_records) == 60
     assert spec_records[4] == {
@@ -202,34 +170,35 @@ def test_engine_parsers_comet_get_spec_records():
 
 
 def test_engine_parsers_comet_map_mods_sequences():
-    fixed_mods = {"C": "Carbamidomethyl", "O": "Oxidation"}
+    parser = Comet_2020_01_4_Parser(input_file=None, params=None)
+    parser.fixed_mods = {"C": "Carbamidomethyl", "O": "Oxidation"}
     sequence = "ABCDEFCABC"
-    mods = map_mods_sequences(fixed_mods, sequence)
+    mods = parser.map_mods_sequences(sequence)
     assert mods == "Carbamidomethyl:3;Carbamidomethyl:7;Carbamidomethyl:10"
 
     sequence = "ABCDOEFOCABC"
-    mods = map_mods_sequences(fixed_mods, sequence)
+    mods = parser.map_mods_sequences(sequence)
     assert (
         mods
         == "Carbamidomethyl:3;Carbamidomethyl:9;Carbamidomethyl:12;Oxidation:5;Oxidation:8"
     )
 
     sequence = "OOOOOCCCCCMMMMM"
-    mods = map_mods_sequences(fixed_mods, sequence)
+    mods = parser.map_mods_sequences(sequence)
     assert (
         mods
         == "Carbamidomethyl:6;Carbamidomethyl:7;Carbamidomethyl:8;Carbamidomethyl:9;Carbamidomethyl:10;Oxidation:1;Oxidation:2;Oxidation:3;Oxidation:4;Oxidation:5"
     )
 
     sequence = "CD"
-    mods = map_mods_sequences(fixed_mods, sequence)
+    mods = parser.map_mods_sequences(sequence)
     assert mods == "Carbamidomethyl:1"
 
     sequence = "C"
-    mods = map_mods_sequences(fixed_mods, sequence)
+    mods = parser.map_mods_sequences(sequence)
     assert mods == "Carbamidomethyl:1"
 
-    fixed_mods = {}
+    parser.fixed_mods = {}
     sequence = "ASLDPOCSADK"
     with pytest.raises(ValueError):
-        map_mods_sequences(fixed_mods, sequence)
+        parser.map_mods_sequences(sequence)

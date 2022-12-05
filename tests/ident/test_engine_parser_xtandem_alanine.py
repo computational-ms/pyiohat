@@ -4,7 +4,6 @@ import pytest
 
 from pyprotista.parsers.ident.xtandem_alanine import (
     XTandemAlanine_Parser,
-    get_spec_records,
 )
 
 
@@ -311,8 +310,8 @@ def test_engine_parsers_xtandem_get_spec_records():
     input_file = (
         pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_xtandem_alanine.xml"
     )
-    parser = XTandemAlanine_Parser(input_file, params=None)
-    spec_records, search_engine = get_spec_records(input_file, parser.mapping_dict)
+    parser = XTandemAlanine_Parser(input_file=input_file, params=None)
+    spec_records, search_engine = parser.get_spec_records()
 
     assert len(spec_records) == 79
     assert spec_records[0] == {
