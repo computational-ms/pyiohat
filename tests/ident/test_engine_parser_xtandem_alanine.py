@@ -100,7 +100,7 @@ def test_engine_parsers_xtandem_check_dataframe_integrity():
         },
     )
     df = parser.unify()
-    assert len(parser.root) == 79
+    assert len(df) == 79
     assert (df["raw_data_location"] == "path/for/glory.mzML").all()
     assert pytest.approx(df["ucalc_mz"].mean()) == 796.4324
     assert pytest.approx(df["exp_mz"].mean()) == 796.71967

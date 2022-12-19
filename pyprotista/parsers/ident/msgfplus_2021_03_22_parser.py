@@ -33,7 +33,7 @@ class MSGFPlus_2021_03_22_Parser(IdentBaseParser):
         """Assert compatibility between file and parser.
 
         Args:
-            file (str): path to input file
+            file (path object): path to input file
 
         Returns:
             bool: True if parser and file are compatible

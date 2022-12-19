@@ -21,8 +21,6 @@ class XTandemAlanine_Parser(IdentBaseParser):
         self.spec_records = None
         self.search_engine = None
         self.style = "xtandem_style_1"
-        tree = etree.parse(self.input_file)
-        self.root = tree.getroot()
         self.mapping_dict = {
             v: k
             for k, v in self.param_mapper.get_default_params(style=self.style)[
@@ -35,7 +33,7 @@ class XTandemAlanine_Parser(IdentBaseParser):
         """Assert compatibility between file and parser.
 
         Args:
-            file (str): path to input file
+            file (path object): path to input file
 
         Returns:
             bool: True if parser and file are compatible
