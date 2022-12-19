@@ -1,13 +1,14 @@
 """Parser handler."""
+import csv
 import json
 from pathlib import Path
-import csv
 
+import numpy as np
 import pandas as pd
 import uparma
 from chemical_composition import ChemicalComposition
-from unimod_mapper.unimod_mapper import UnimodMapper
 from loguru import logger
+from unimod_mapper.unimod_mapper import UnimodMapper
 
 
 class BaseParser:
