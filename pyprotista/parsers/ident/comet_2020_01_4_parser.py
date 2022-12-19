@@ -40,11 +40,10 @@ class Comet_2020_01_4_Parser(IdentBaseParser):
 
         Returns:
             bool: True if parser and file are compatible
-
         """
-        is_mzid = file.as_posix().endswith(".mzid")
+        is_mzid = file.name.endswith(".mzid")
 
-        with open(file.as_posix()) as f:
+        with open(file) as f:
             try:
                 head = "".join([next(f) for _ in range(10)])
             except StopIteration:
@@ -58,6 +57,7 @@ class Comet_2020_01_4_Parser(IdentBaseParser):
         Returns:
             version (str): file version
         """
+        version = ""
         for event, entry in etree.iterparse(self.input_file):
             entry_tag = entry.tag
 
@@ -70,8 +70,9 @@ class Comet_2020_01_4_Parser(IdentBaseParser):
                 version = "comet_" + "_".join(
                     re.findall("[0-9]+", entry.attrib["version"])
                 )
-                return version
+                break
             entry.clear()
+        return version
 
     def map_mod_mass(self):
         """Retrieve information on modifications from xml.
@@ -97,10 +98,12 @@ class Comet_2020_01_4_Parser(IdentBaseParser):
                 elif entry_tag.endswith("SearchModification"):
                     mod_mass_map[entry.attrib["massDelta"]] = mod_name
                     if entry.attrib["fixedMod"] == "true":
-                        fixed_mods.update({entry.attrib["residues"]: mod_name})
+                        _key = entry.attrib["residues"]
+                        fixed_mods[_key] = mod_name
                 elif entry_tag.endswith("ModificationParams"):
-                    return fixed_mods, mod_mass_map
+                    break
             entry.clear()
+        return fixed_mods, mod_mass_map
 
     def get_peptide_lookup(self):
         """Retrieve peptide ids with their corresponding sequences and modifications from xml.
@@ -110,7 +113,7 @@ class Comet_2020_01_4_Parser(IdentBaseParser):
         """
         peptide_lookup = {}
 
-        modifications = ""
+        modifications = []
         sequence = {}
         peptide_information = False
 
@@ -124,20 +127,23 @@ class Comet_2020_01_4_Parser(IdentBaseParser):
                     sequence = entry.text
                     if len(self.fixed_mods) > 0:
                         sequence_mod_map = self.map_mods_sequences(sequence)
-                        modifications = sequence_mod_map + ";"
-                    else:
-                        modifications = ""
+                        if sequence_mod_map != "":
+                            modifications.append(sequence_mod_map)
                 elif entry_tag.endswith("Modification"):
                     mass = entry.attrib["monoisotopicMassDelta"]
                     location = entry.attrib["location"]
                     mass_name = self.mod_mass_map[mass]
-                    modifications += mass_name + ":" + location + ";"
+                    modifications.append(mass_name + ":" + location)
                 elif entry_tag.endswith("Peptide"):
-                    modifications = modifications.rstrip(";").lstrip(";")
-                    peptide_lookup[entry.attrib["id"]] = (modifications, sequence)
+                    peptide_lookup[entry.attrib["id"]] = (
+                        ";".join(modifications),
+                        sequence,
+                    )
+                    modifications = []
                 elif entry_tag.endswith("PeptideEvidence"):
-                    return peptide_lookup
+                    break
             entry.clear()
+        return peptide_lookup
 
     def get_spec_records(self):
         """Retrieve specs from file.
@@ -159,35 +165,31 @@ class Comet_2020_01_4_Parser(IdentBaseParser):
             elif spec_information is True:
                 if entry_tag.endswith("cvParam"):
                     if entry.attrib["name"] in self.mapping_dict:
-                        spec_results.update(
-                            {
-                                self.mapping_dict[entry.attrib["name"]]: entry.attrib[
-                                    "value"
-                                ]
-                            }
-                        )
+                        _key = self.mapping_dict[entry.attrib["name"]]
+                        spec_results[_key] = entry.attrib["value"]
                 elif entry_tag.endswith("SpectrumIdentificationItem"):
                     for attribute in list(entry.attrib):
                         if attribute in self.mapping_dict.keys():
-                            spec_results.update(
-                                {self.mapping_dict[attribute]: entry.attrib[attribute]}
-                            )
+                            _key = self.mapping_dict[attribute]
+                            spec_results[_key] = entry.attrib[attribute]
                     mods, sequence = self.peptide_lookup[spec_results["sequence"]]
-                    spec_results.update({"modifications": mods, "sequence": sequence})
+                    spec_results["modifications"] = mods
+                    spec_results["sequence"] = sequence
                     spec_ident_items.append(spec_results)
                     spec_results = {}
                 elif entry_tag.endswith("SpectrumIdentificationResult"):
                     for spec_item in spec_ident_items:
                         spec_item.update(spec_results)
-                        spec_item.update(
-                            {"spectrum_id": entry.attrib["spectrumID"].lstrip("scan=")}
+                        spec_item["spectrum_id"] = entry.attrib["spectrumID"].lstrip(
+                            "scan="
                         )
                         spec_records.append(spec_item)
                     spec_results = {}
                     spec_ident_items = []
                 elif entry_tag.endswith("SpectrumIdentificationList"):
-                    return spec_records
+                    break
             entry.clear()
+        return spec_records
 
     def map_mods_sequences(self, sequence):
         """Map fixed_mods and sequence to get corresponding modifications.

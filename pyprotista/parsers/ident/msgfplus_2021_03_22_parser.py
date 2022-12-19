@@ -37,11 +37,10 @@ class MSGFPlus_2021_03_22_Parser(IdentBaseParser):
 
         Returns:
             bool: True if parser and file are compatible
-
         """
         is_mzid = file.name.endswith(".mzid")
 
-        with open(file.as_posix()) as f:
+        with open(file) as f:
             try:
                 head = "".join([next(f) for _ in range(20)])
             except StopIteration:
@@ -55,6 +54,7 @@ class MSGFPlus_2021_03_22_Parser(IdentBaseParser):
         Returns:
             version (str): file version
         """
+        version = ""
         for event, entry in etree.iterparse(self.input_file):
             entry_tag = entry.tag
 
@@ -67,8 +67,9 @@ class MSGFPlus_2021_03_22_Parser(IdentBaseParser):
                 version = "msgfplus_" + "_".join(
                     re.findall("[0-9]+", entry.attrib["version"])
                 )
-                return version
+                break
             entry.clear()
+        return version
 
     def get_peptide_lookup(self):
         """Retrieve peptide ids with their corresponding sequences and modifications from xml.
@@ -98,13 +99,14 @@ class MSGFPlus_2021_03_22_Parser(IdentBaseParser):
                     cv_param_modifications += entry.attrib["location"] + ";"
                 elif entry_tag.endswith("Peptide"):
                     peptide_lookup[entry.attrib["id"]] = sequence
-                    peptide_lookup[entry.attrib["id"]].update(
-                        {"modifications": cv_param_modifications.rstrip(";")}
-                    )
+                    peptide_lookup[entry.attrib["id"]][
+                        "modifications"
+                    ] = cv_param_modifications.rstrip(";")
                     cv_param_modifications = ""
                 elif entry_tag.endswith("PeptideEvidence"):
-                    return peptide_lookup
+                    break
             entry.clear()
+        return peptide_lookup
 
     def get_spec_records(self):
         """Retrieve specs from file.
@@ -126,13 +128,8 @@ class MSGFPlus_2021_03_22_Parser(IdentBaseParser):
             elif spec_information is True:
                 if entry_tag.endswith("cvParam") or entry_tag.endswith("userParam"):
                     if entry.attrib["name"] in self.mapping_dict:
-                        spec_results.update(
-                            {
-                                self.mapping_dict[entry.attrib["name"]]: entry.attrib[
-                                    "value"
-                                ]
-                            }
-                        )
+                        _key = self.mapping_dict[entry.attrib["name"]]
+                        spec_results[_key] = entry.attrib["value"]
                 elif entry_tag.endswith("SpectrumIdentificationItem"):
                     for attribute in list(entry.attrib):
                         if attribute in self.mapping_dict.keys():
@@ -145,13 +142,8 @@ class MSGFPlus_2021_03_22_Parser(IdentBaseParser):
                                     psm_id
                                 ]["modifications"]
                             else:
-                                spec_results.update(
-                                    {
-                                        self.mapping_dict[attribute]: entry.attrib[
-                                            attribute
-                                        ]
-                                    }
-                                )
+                                _key = self.mapping_dict[attribute]
+                                spec_results[_key] = entry.attrib[attribute]
                     # multiple SpectrumIdentificationItems possible, therefore create a list and reset spec_results
                     spec_ident_items.append(spec_results)
                     spec_results = {}
@@ -162,8 +154,9 @@ class MSGFPlus_2021_03_22_Parser(IdentBaseParser):
                     spec_results = {}
                     spec_ident_items = []
                 elif entry_tag.endswith("SpectrumIdentificationList"):
-                    return spec_records
+                    break
             entry.clear()
+        return spec_records
 
     def unify(self):
         """

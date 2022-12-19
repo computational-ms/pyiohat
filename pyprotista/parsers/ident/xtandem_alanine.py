@@ -39,10 +39,9 @@ class XTandemAlanine_Parser(IdentBaseParser):
 
         Returns:
             bool: True if parser and file are compatible
-
         """
-        is_xml = file.as_posix().endswith(".xml")
-        with open(file.as_posix()) as f:
+        is_xml = file.name.endswith(".xml")
+        with open(file) as f:
             try:
                 head = "".join([next(f) for _ in range(10)])
             except StopIteration:
@@ -59,6 +58,7 @@ class XTandemAlanine_Parser(IdentBaseParser):
             search_engine (str): file version
         """
         spec_records = []
+        search_engine = ""
 
         results = {}
         domains = []
@@ -75,9 +75,8 @@ class XTandemAlanine_Parser(IdentBaseParser):
             elif entry_tag == ("domain"):
                 for attrib in list(entry.attrib):
                     if attrib in self.mapping_dict:
-                        results.update(
-                            {self.mapping_dict[attrib]: entry.attrib[attrib]}
-                        )
+                        _key = self.mapping_dict[attrib]
+                        results[_key] = entry.attrib[attrib]
                 for aa in aa_mods:
                     mass = aa["mass"]
                     at = aa["at"]
@@ -92,8 +91,8 @@ class XTandemAlanine_Parser(IdentBaseParser):
                 results = {}
             elif entry_tag == ("note"):
                 if entry.attrib["label"] == "Description":
-                    results.update({"spectrum_title": entry.text.split()[0]})
-                    results.update({"spectrum_id": entry.text.split(".")[-3]})
+                    results["spectrum_title"] = entry.text.split()[0]
+                    results["spectrum_id"] = entry.text.split(".")[-3]
                 elif entry.attrib["label"] == "process, version":
                     search_engine = (
                         "xtandem_"
@@ -103,9 +102,8 @@ class XTandemAlanine_Parser(IdentBaseParser):
                 if "id" in entry.attrib:
                     for attrib in list(entry.attrib):
                         if attrib in self.mapping_dict:
-                            results.update(
-                                {self.mapping_dict[attrib]: entry.attrib[attrib]}
-                            )
+                            _key = self.mapping_dict[attrib]
+                            results[_key] = entry.attrib[attrib]
                     for dom in domains:
                         dom.update(results)
                         spec_records.append(dom)
@@ -121,7 +119,6 @@ class XTandemAlanine_Parser(IdentBaseParser):
 
         Returns:
             df (pd.DataFrame): dataframe with processed modification column
-
         """
         unique_mods = set().union(*df["modifications"].apply(set).values)
         unique_mod_masses = {m.split(":")[0] for m in unique_mods}
