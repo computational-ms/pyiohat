@@ -1,11 +1,8 @@
 #!/usr/bin/env python
-import pandas as pd
 import pytest
-from lxml import etree
 
 from pyprotista.parsers.ident.msgfplus_2021_03_22_parser import (
     MSGFPlus_2021_03_22_Parser,
-    _get_single_spec_df,
 )
 
 
@@ -109,109 +106,6 @@ def test_engine_parsers_msgfplus_check_dataframe_integrity():
     assert df["modifications"].str.count(":").sum() == 71
 
 
-def test_engine_parsers_msgfplus_get_peptide_lookup():
-    input_file = pytest._test_path / "data" / "BSA1_msgfplus_2021_03_22.mzid"
-
-    parser = MSGFPlus_2021_03_22_Parser(
-        input_file,
-        params={
-            "cpus": 2,
-            "enzyme": "(?<=[KR])(?![P])",
-            "terminal_cleavage_site_integrity": "any",
-            "validation_score_field": {"msgfplus_2021_03_22": "ms-gf:spec_evalue"},
-            "bigger_scores_better": {"msgfplus_2021_03_22": False},
-            "modifications": [
-                {
-                    "aa": "M",
-                    "type": "opt",
-                    "position": "any",
-                    "name": "Oxidation",
-                },
-                {
-                    "aa": "C",
-                    "type": "fix",
-                    "position": "any",
-                    "name": "Carbamidomethyl",
-                },
-                {
-                    "aa": "*",
-                    "type": "opt",
-                    "position": "Prot-N-term",
-                    "name": "Acetyl",
-                },
-            ],
-        },
-    )
-    lookup = parser._get_peptide_lookup()
-    assert len(lookup) == 24
-    assert "Pep_YICDNQDTISSK" in lookup.keys()
-    assert lookup["Pep_YICDNQDTISSK"]["sequence"] == "YICDNQDTISSK"
-    assert lookup["Pep_YICDNQDTISSK"]["modifications"] == "Carbamidomethyl:3"
-
-
-def test_get_single_spec_df_msgf():
-    input_file = pytest._test_path / "data" / "BSA1_msgfplus_2021_03_22.mzid"
-    element = (
-        etree.parse(input_file).getroot().find(".//{*}SpectrumIdentificationResult")
-    )
-    ref_dict = {
-        "exp_mz": None,
-        "calc_mz": None,
-        "spectrum_title": None,
-        "search_engine": "msgfplus_2021_03_22",
-        "spectrum_id": None,
-        "modifications": None,
-        "retention time_seconds": None,
-        "charge": None,
-        "ms-gf:denovoscore": None,
-        "ms-gf:evalue": None,
-        "ms-gf:raw_score": None,
-        "sequence": None,
-        "ms-gf:spec_evalue": None,
-        "ms-gf:num_matched_ions": None,
-    }
-    mapping_dict = {
-        "chargeState": "charge",
-        "MS-GF:DeNovoScore": "ms-gf:denovoscore",
-        "MS-GF:EValue": "ms-gf:evalue",
-        "MS-GF:RawScore": "ms-gf:rawscore",
-        "peptide_ref": "sequence",
-        "experimentalMassToCharge": "exp_mz",
-        "calculatedMassToCharge": "calc_mz",
-        "scan number(s)": "spectrum_id",
-        "MS-GF:SpecEValue": "ms-gf:spec_evalue",
-        "spectrum title": "spectrum_title",
-        "NumMatchedMainIons": "ms-gf:num_matched_ions",
-    }
-    _get_single_spec_df.reference_dict = ref_dict
-    _get_single_spec_df.mapping_dict = mapping_dict
-    result = _get_single_spec_df(etree.tostring(element))
-
-    assert isinstance(result, pd.DataFrame)
-    assert (
-        result.values
-        == [
-            [
-                "722.3272094726562",
-                "722.3246459960938",
-                "glory.2791.2791.2",
-                "msgfplus_2021_03_22",
-                "2791",
-                None,
-                None,
-                "2",
-                "40",
-                "2.6986221E-12",
-                None,
-                "Pep_YICDNQDTISSK",
-                "4.4458354E-15",
-                "3",
-                "40",
-            ]
-        ]
-    ).all()
-
-
 def test_engine_parsers_msgfplus_check_dataframe_integrity_unknown_mod():
     input_file = (
         pytest._test_path / "data" / "BSA1_msgfplus_2021_03_22_unknown_mod.mzid"
@@ -258,7 +152,7 @@ def test_engine_parsers_msgfplus_check_dataframe_integrity_unknown_mod():
         },
     )
     df = parser.unify()
-    assert pytest.approx(df["exp_mz"].mean()) == 488.0319
+
     assert len(df) == 92
     # Currently this excludes two peptides and is reduced
     assert pytest.approx(df["ucalc_mz"].mean()) == 486.56
@@ -274,3 +168,66 @@ def test_engine_parsers_msgfplus_check_dataframe_integrity_unknown_mod():
         == df[df["sequence"] != "EACFAVEGPK"]["sequence"].str.count("C")
     ).all()
     assert df["modifications"].str.count(":").sum() == 71
+
+
+def test_engine_parsers_msgfplus_get_version():
+    input_file = pytest._test_path / "data" / "BSA1_msgfplus_2021_03_22.mzid"
+    parser = MSGFPlus_2021_03_22_Parser(input_file=input_file, params=None)
+    version = parser.get_version()
+
+    assert version == "msgfplus_2021_03_22"
+
+
+def test_engine_parsers_msgfplus_get_peptide_lookup():
+    input_file = pytest._test_path / "data" / "BSA1_msgfplus_2021_03_22.mzid"
+    parser = MSGFPlus_2021_03_22_Parser(input_file=input_file, params=None)
+    peptide_lookup = parser.get_peptide_lookup()
+
+    assert len(peptide_lookup) == 24
+    for pep in peptide_lookup:
+        assert len(peptide_lookup[pep]) == 2
+        assert pep.startswith("Pep_")
+    assert peptide_lookup["Pep_LVTDLTK"] == {"sequence": "LVTDLTK", "modifications": ""}
+    assert peptide_lookup["Pep_LVVSTQTALA"] == {
+        "sequence": "LVVSTQTALA",
+        "modifications": "",
+    }
+
+
+def test_engine_parsers_msgfplus_get_spec_records():
+    input_file = pytest._test_path / "data" / "BSA1_msgfplus_2021_03_22.mzid"
+    parser = MSGFPlus_2021_03_22_Parser(input_file=input_file, params=None)
+    parser.peptide_lookup = parser.get_peptide_lookup()
+    spec_records = parser.get_spec_records()
+
+    assert len(spec_records) == 92
+    assert spec_records[0] == {
+        "ms-gf:raw_score": "40",
+        "ms-gf:denovoscore": "40",
+        "ms-gf:spec_evalue": "4.4458354E-15",
+        "ms-gf:evalue": "2.6986221E-12",
+        "ms-gf:num_matched_ions": "3",
+        "charge": "2",
+        "exp_mz": "722.3272094726562",
+        "calc_mz": "722.3246459960938",
+        "sequence": "YICDNQDTISSK",
+        "modifications": "Carbamidomethyl:3",
+        "spectrum_title": "glory.2791.2791.2",
+        "spectrum_id": "2791",
+        "retention_time_seconds": "1918.6086",
+    }
+    assert spec_records[44] == {
+        "ms-gf:raw_score": "26",
+        "ms-gf:denovoscore": "32",
+        "ms-gf:spec_evalue": "2.2523169E-8",
+        "ms-gf:evalue": "1.36715635E-5",
+        "ms-gf:num_matched_ions": "1",
+        "charge": "3",
+        "exp_mz": "325.4911804199219",
+        "calc_mz": "325.4907531738281",
+        "sequence": "DLGEEHFK",
+        "modifications": "",
+        "spectrum_title": "glory.mzML.2663.2663.3",
+        "spectrum_id": "2663",
+        "retention_time_seconds": "1840.7933333333335",
+    }

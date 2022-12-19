@@ -1,6 +1,5 @@
-import pytest
-
 import numpy as np
+
 from pyprotista.parsers.misc import get_atom_counts
 
 

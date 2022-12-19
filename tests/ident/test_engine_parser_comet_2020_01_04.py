@@ -1,12 +1,8 @@
 #!/usr/bin/env python
-
-import pandas as pd
 import pytest
-from lxml import etree
 
 from pyprotista.parsers.ident.comet_2020_01_4_parser import (
     Comet_2020_01_4_Parser,
-    _get_single_spec_df,
 )
 
 
@@ -106,69 +102,103 @@ def test_engine_parsers_comet_check_dataframe_integrity():
     assert (df["raw_data_location"] == "path/for/glory.mzML").all()
 
 
-def test_get_single_spec_df_comet():
+def test_engine_parsers_comet_get_version():
     input_file = pytest._test_path / "data" / "BSA1_comet_2020_01_4.mzid"
-    element = (
-        etree.parse(input_file)
-        .getroot()
-        .find(".//{*}SpectrumIdentificationList/{*}SpectrumIdentificationResult")
-    )
-    ref_dict = {
-        "exp_mz": None,
-        "calc_mz": None,
-        "spectrum_title": None,
-        "search_engine": "comet_2020_01_4",
-        "spectrum_id": None,
-        "modifications": None,
-        "retention_time_seconds": None,
-        "charge": None,
-        "comet:score": None,
-        "comet:deltacn": None,
-        "comet:xcorr": None,
-        "comet:evalue": None,
-        "sequence": None,
-        "comet:spec_evalue": None,
-        "comet:num_matched_ions": None,
-        "comet:num_unmatched_ions": None,
-    }
-    mapping_dict = {
-        "chargeState": "charge",
-        "Comet:spscore": "comet:score",
-        "Comet:deltacn": "comet:deltacn",
-        "Comet:xcorr": "comet:xcorr",
-        "Comet:expectation value": "comet:evalue",
-        "peptide_ref": "sequence",
-        "experimentalMassToCharge": "exp_mz",
-        "calculatedMassToCharge": "calc_mz",
-        "SpecEValue": "comet:spec_evalue",
-        "number of matched peaks": "comet:num_matched_ions",
-        "number of unmatched peaks": "comet:num_unmatched_ions",
-    }
-    _get_single_spec_df.reference_dict = ref_dict
-    _get_single_spec_df.mapping_dict = mapping_dict
-    result = _get_single_spec_df(etree.tostring(element))
+    parser = Comet_2020_01_4_Parser(input_file, params=None)
+    version = parser.get_version()
+    assert version == "comet_2020_01_4"
 
-    assert isinstance(result, pd.DataFrame)
+
+def test_engine_parser_comet_map_mod_mass():
+    input_file = pytest._test_path / "data" / "BSA1_comet_2020_01_4.mzid"
+    parser = Comet_2020_01_4_Parser(input_file=input_file, params=None)
+    fixed_mods, modifications = parser.map_mod_mass()
+    assert fixed_mods == {"C": "Carbamidomethyl"}
+    assert modifications == {
+        "57.021464": "Carbamidomethyl",
+        "15.994915": "Oxidation",
+        "42.010565": "Acetyl",
+    }
+
+
+def test_engine_parsers_comet_get_peptide_lookup():
+    input_file = pytest._test_path / "data" / "BSA1_comet_2020_01_4.mzid"
+    parser = Comet_2020_01_4_Parser(input_file=input_file, params=None)
+    parser.fixed_mods, parser.mod_mass_map = parser.map_mod_mass()
+    peptide_lookup = parser.get_peptide_lookup()
+    assert len(peptide_lookup) == 24
+    assert "EACFAVEGPK;10:42.010565;" in peptide_lookup.keys()
+    assert peptide_lookup["LVTDLTK;"] == ("", "LVTDLTK")
+
+
+def test_engine_parsers_comet_get_spec_records():
+    input_file = pytest._test_path / "data" / "BSA1_comet_2020_01_4.mzid"
+    parser = Comet_2020_01_4_Parser(input_file=input_file, params=None)
+    parser.fixed_mods, parser.mod_mass_map = parser.map_mod_mass()
+    parser.peptide_lookup = parser.get_peptide_lookup()
+    spec_records = parser.get_spec_records()
+
+    assert len(spec_records) == 60
+    assert spec_records[4] == {
+        "comet:num_matched_ions": "3",
+        "comet:num_unmatched_ions": "33",
+        "comet:xcorr": "0.3634",
+        "comet:deltacn": "1.0000",
+        "comet:score": "6.4000",
+        "comet:e_value": "3.35E+01",
+        "charge": "3",
+        "sequence": "ECCDKPLLEK",
+        "exp_mz": "431.205597",
+        "calc_mz": "431.205546",
+        "modifications": "Carbamidomethyl:2;Carbamidomethyl:3",
+        "spectrum_id": "2569",
+    }
+    assert spec_records[58] == {
+        "comet:num_matched_ions": "2",
+        "comet:num_unmatched_ions": "50",
+        "comet:xcorr": "0.4654",
+        "comet:deltacn": "1.0000",
+        "comet:score": "5.7000",
+        "comet:e_value": "2.96E+01",
+        "charge": "3",
+        "sequence": "VPQVSTPTLVEVSR",
+        "exp_mz": "504.618805",
+        "calc_mz": "504.619112",
+        "modifications": "",
+        "spectrum_id": "3547",
+    }
+
+
+def test_engine_parsers_comet_map_mods_sequences():
+    parser = Comet_2020_01_4_Parser(input_file=None, params=None)
+    parser.fixed_mods = {"C": "Carbamidomethyl", "O": "Oxidation"}
+    sequence = "ABCDEFCABC"
+    mods = parser.map_mods_sequences(sequence)
+    assert mods == "Carbamidomethyl:3;Carbamidomethyl:7;Carbamidomethyl:10"
+
+    sequence = "ABCDOEFOCABC"
+    mods = parser.map_mods_sequences(sequence)
     assert (
-        result.values
-        == [
-            [
-                "358.174682",
-                "358.174575",
-                None,
-                "comet_2020_01_4",
-                "2458",
-                None,
-                None,
-                "3",
-                "5.9000",
-                "1.0000",
-                "0.2825",
-                "3.76E+01",
-                "SHCIAEVEK;",
-                None,
-                "3",
-                "29",
-            ]
-        ]
-    ).all()
+        mods
+        == "Carbamidomethyl:3;Carbamidomethyl:9;Carbamidomethyl:12;Oxidation:5;Oxidation:8"
+    )
+
+    sequence = "OOOOOCCCCCMMMMM"
+    mods = parser.map_mods_sequences(sequence)
+    assert (
+        mods
+        == "Carbamidomethyl:6;Carbamidomethyl:7;Carbamidomethyl:8;Carbamidomethyl:9;Carbamidomethyl:10;Oxidation:1;Oxidation:2;Oxidation:3;Oxidation:4;Oxidation:5"
+    )
+
+    sequence = "CD"
+    mods = parser.map_mods_sequences(sequence)
+    assert mods == "Carbamidomethyl:1"
+
+    sequence = "C"
+    mods = parser.map_mods_sequences(sequence)
+    assert mods == "Carbamidomethyl:1"
+
+    parser.fixed_mods = {}
+    sequence = "ASLDPOCSADK"
+    with pytest.raises(ValueError):
+        parser.map_mods_sequences(sequence)
