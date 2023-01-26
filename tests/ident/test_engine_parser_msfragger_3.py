@@ -212,4 +212,4 @@ def test_msfragger_open_search():
         },
     )
     df = parser.unify()
-    assert df["mass_delta"].mean() == 458.901
+    assert df["mass_delta"].mean() == pytest.approx(458.901, abs=1e-6)
