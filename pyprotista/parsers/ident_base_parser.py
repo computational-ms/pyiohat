@@ -264,6 +264,10 @@ class IdentBaseParser(BaseParser):
                     "accuracy_ppm_C12",
                 ),
             ] = np.nan
+        self.df.loc[:, "exp_mass"] = self._calc_mass(
+            mz=self.df["exp_mz"], charge=self.df["charge"]
+        )
+        self.df.loc[:, "mass_delta"] = self.df["exp_mass"] - self.df["ucalc_mass"]
 
     def get_meta_info(self):
         """Extract meta information.

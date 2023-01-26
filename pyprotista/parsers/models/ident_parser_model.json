@@ -40,6 +40,11 @@
     "dtype": "float32"
   },
   {
+    "name": "exp_mass",
+    "description": "Experimental mass ratio, recalculated by pyProtista using MS run metainfo",
+    "dtype": "float32"
+  },
+  {
     "name": "ucalc_mz",
     "description": "Ursgal calculated m/z ratio, recalculated by pyProtista using ucalc_mass",
     "dtype": "float32"
@@ -47,6 +52,11 @@
   {
     "name": "ucalc_mass",
     "description": "Ursgal calculated C12 mass using the chemical formula as computed by chemical_composition",
+    "dtype": "float32"
+  },
+  {
+    "name": "mass_delta",
+    "description": "Difference between exp_mass and ucalc_mass",
     "dtype": "float32"
   },
   {

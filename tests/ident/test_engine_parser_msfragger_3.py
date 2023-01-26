@@ -190,3 +190,26 @@ def test_c_terminal_tmt():
     )
     converted = parser.translate_mods()
     assert converted[0] == "TMT6plex:0;TMT6plex:6"
+
+
+def test_msfragger_open_search():
+    input_file = pytest._test_path / "data" / "BSA1_open_search.msfragger.tsv"
+    rt_lookup_path = pytest._test_path / "data" / "BSA1_ursgal_lookup.csv"
+    db_path = pytest._test_path / "data" / "BSA.fasta"
+
+    parser = MSFragger_3_Parser(
+        input_file,
+        params={
+            "cpus": 2,
+            "rt_pickle_name": rt_lookup_path,
+            "database": db_path,
+            "enzyme": "(?<=[KR])(?![P])",
+            "terminal_cleavage_site_integrity": "any",
+            "validation_score_field": {"msfragger_3_0": "msfragger:hyperscore"},
+            "bigger_scores_better": {"msfragger_3_0": True},
+            "modifications": [],
+            "15N": False,
+        },
+    )
+    df = parser.unify()
+    assert df["mass_delta"].mean() == pytest.approx(458.901, abs=1e-6)
