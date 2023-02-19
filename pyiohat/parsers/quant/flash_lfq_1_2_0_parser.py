@@ -5,8 +5,8 @@ from pathlib import Path
 import pandas as pd
 from chemical_composition import ChemicalComposition
 
-from pyprotista.parsers.quant_base_parser import QuantBaseParser
-from pyprotista.parsers.misc import get_compositions_and_monoisotopic_masses
+from pyiohat.parsers.quant_base_parser import QuantBaseParser
+from pyiohat.parsers.misc import get_compositions_and_monoisotopic_masses
 
 
 class FlashLFQ_1_2_0_Parser(QuantBaseParser):

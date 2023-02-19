@@ -6,7 +6,7 @@ requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
-write_to = "pyprotista/version.txt"
+write_to = "pyiohat/version.txt"
 
 [tool.black]
 line-length = 88
@@ -35,6 +35,6 @@ commands =
 deps = -Ur{toxinidir}/requirements_dev.txt
 commands =
     coverage erase
-    coverage run --source=pyprotista {envbindir}/pytest {posargs}
+    coverage run --source=pyiohat {envbindir}/pytest {posargs}
     coverage report -m
 """

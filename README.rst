@@ -1,19 +1,19 @@
-pyProtista
+pyiohat
 ==========
 
 |build-status-gh| |pypi|
 
-.. |pypi| image:: https://badge.fury.io/py/pyProtista.svg
-    :target: https://badge.fury.io/py/pyProtista
+.. |pypi| image:: https://badge.fury.io/py/pyiohat.svg
+    :target: https://badge.fury.io/py/pyiohat
 
-.. |build-status-gh| image:: https://github.com/computational-ms/pyProtista/actions/workflows/tox_ci.yml/badge.svg
-    :target: https://github.com/computational-ms/pyProtista/actions
+.. |build-status-gh| image:: https://github.com/computational-ms/pyiohat/actions/workflows/tox_ci.yml/badge.svg
+    :target: https://github.com/computational-ms/pyiohat/actions
     
-.. image:: https://img.shields.io/pypi/pyversions/pyProtista.svg
-        :target: https://pypi.python.org/pypi/pyProtista/
+.. image:: https://img.shields.io/pypi/pyversions/pyiohat.svg
+        :target: https://pypi.python.org/pypi/pyiohat/
 
 
-Buttom up proteomics tools come with many different output formats and while some standards, like mzIdentML, mzQuantML or mzTab exist, 
+Bottom up proteomics tools come with many different output formats and while some standards, like mzIdentML, mzQuantML or mzTab exist,
 those standards have not be consistently implemented by all tools. As a result we have developed a python 
 library that can be used to harmonize the outputs from identification and quantification tools for buttom up proteomics.
 

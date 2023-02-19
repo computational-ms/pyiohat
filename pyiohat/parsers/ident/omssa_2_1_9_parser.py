@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 
-from pyprotista.parsers.ident_base_parser import IdentBaseParser
+from pyiohat.parsers.ident_base_parser import IdentBaseParser
 
 
 class Omssa_Parser(IdentBaseParser):

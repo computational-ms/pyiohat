@@ -1,6 +1,6 @@
 import numpy as np
 
-from pyprotista.parsers.misc import get_atom_counts
+from pyiohat.parsers.misc import get_atom_counts
 
 
 def test_simple():

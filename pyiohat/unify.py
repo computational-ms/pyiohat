@@ -4,14 +4,14 @@ from pathlib import Path
 
 import pandas as pd
 
-from pyprotista.parsers.base_parser import BaseParser
+from pyiohat.parsers.base_parser import BaseParser
 
 
 class Unify:
     """Interface to unify ident outputs from different engines.
 
     Attributes:
-        parser (`pyprotista.parsers.base_parser.__BaseParser`): Parser fitting the specified input_file
+        parser (`pyiohat.parsers.base_parser.__BaseParser`): Parser fitting the specified input_file
 
     """
 

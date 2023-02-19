@@ -1,5 +1,0 @@
-Advanced Usage
-==============
-
-blabla
-

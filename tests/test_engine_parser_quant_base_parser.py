@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import pytest
 
-from pyprotista.parsers.quant_base_parser import QuantBaseParser
+from pyiohat.parsers.quant_base_parser import QuantBaseParser
 
 
 def test_engine_parsers_QuantBaseParser_init():

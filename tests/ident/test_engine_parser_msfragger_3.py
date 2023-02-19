@@ -1,6 +1,6 @@
 import pytest
 
-from pyprotista.parsers.ident.msfragger_3_parser import MSFragger_3_Parser
+from pyiohat.parsers.ident.msfragger_3_parser import MSFragger_3_Parser
 
 
 def test_engine_parsers_msfragger_init():

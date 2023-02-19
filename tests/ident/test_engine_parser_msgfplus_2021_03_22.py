@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import pytest
 
-from pyprotista.parsers.ident.msgfplus_2021_03_22_parser import (
+from pyiohat.parsers.ident.msgfplus_2021_03_22_parser import (
     MSGFPlus_2021_03_22_Parser,
 )
 
