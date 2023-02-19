@@ -4,7 +4,6 @@ import sys
 
 
 def main(input=None):
-
     u = Unify(
         sys.argv[1],
         {
