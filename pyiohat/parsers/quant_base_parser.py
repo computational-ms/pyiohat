@@ -1,6 +1,6 @@
 """Quant base parser class."""
 
-from pyprotista.parsers.base_parser import BaseParser
+from pyiohat.parsers.base_parser import BaseParser
 import pandas as pd
 
 

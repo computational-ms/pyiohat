@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from pyprotista.parsers.base_parser import BaseParser
+from pyiohat.parsers.base_parser import BaseParser
 
 
 def test_uninitialized_parser_compatiblity_is_false():

@@ -2,7 +2,7 @@
 import pandas as pd
 import regex as re
 
-from pyprotista.parsers.ident_base_parser import IdentBaseParser
+from pyiohat.parsers.ident_base_parser import IdentBaseParser
 
 
 class MSAmanda_2_Parser(IdentBaseParser):

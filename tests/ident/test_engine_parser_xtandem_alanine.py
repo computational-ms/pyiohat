@@ -2,7 +2,7 @@
 import pandas as pd
 import pytest
 
-from pyprotista.parsers.ident.xtandem_alanine import (
+from pyiohat.parsers.ident.xtandem_alanine import (
     XTandemAlanine_Parser,
 )
 

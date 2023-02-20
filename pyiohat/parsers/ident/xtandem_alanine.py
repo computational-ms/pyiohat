@@ -6,7 +6,7 @@ import pandas as pd
 import regex as re
 from loguru import logger
 
-from pyprotista.parsers.ident_base_parser import IdentBaseParser
+from pyiohat.parsers.ident_base_parser import IdentBaseParser
 
 
 class XTandemAlanine_Parser(IdentBaseParser):

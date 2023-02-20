@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import pytest
 
-from pyprotista.parsers.ident.comet_2020_01_4_parser import (
+from pyiohat.parsers.ident.comet_2020_01_4_parser import (
     Comet_2020_01_4_Parser,
 )
 

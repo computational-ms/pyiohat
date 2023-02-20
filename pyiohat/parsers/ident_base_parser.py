@@ -10,14 +10,14 @@ from loguru import logger
 from peptide_mapper.mapper import UPeptideMapper
 
 
-from pyprotista.parsers.base_parser import BaseParser
-from pyprotista.parsers.misc import (
+from pyiohat.parsers.base_parser import BaseParser
+from pyiohat.parsers.misc import (
     get_compositions_and_monoisotopic_masses,
     get_isotopologue_accuracy,
     init_custom_cc,
     sort_mods,
 )
-from pyprotista.utils import merge_and_join_dicts
+from pyiohat.utils import merge_and_join_dicts
 
 mp.set_start_method(method="fork")
 

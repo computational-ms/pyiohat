@@ -9,8 +9,8 @@ import regex as re
 from loguru import logger
 from tqdm import tqdm
 
-from pyprotista.parsers.ident_base_parser import IdentBaseParser
-from pyprotista.utils import merge_and_join_dicts
+from pyiohat.parsers.ident_base_parser import IdentBaseParser
+from pyiohat.utils import merge_and_join_dicts
 
 mascot_custom_psm_regex = re.compile(
     r"(?:[-+0-9]+),(?P<exp_mass>[0-9\.]+),(?:[-0-9\.]+),(?P<n_matched_ions>[0-9]+),(?P<seq>[A-Z]+),(?:[0-9]+),(?P<opt_mod_string>[0-9]+),(?P<score>[.0-9]+),(?:[0-9]+),(?:.+subst;)(?P<subst>.+)"

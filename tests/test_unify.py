@@ -3,19 +3,19 @@ from pathlib import Path
 
 import pytest
 
-import pyprotista
-from pyprotista.parsers.ident.comet_2020_01_4_parser import (
+import pyiohat
+from pyiohat.parsers.ident.comet_2020_01_4_parser import (
     Comet_2020_01_4_Parser,
 )
-from pyprotista.parsers.ident.mascot_2_6_2_parser import Mascot_2_6_2_Parser
-from pyprotista.parsers.ident.msamanda_2_parser import MSAmanda_2_Parser
-from pyprotista.parsers.ident.msfragger_3_parser import MSFragger_3_Parser
-from pyprotista.parsers.ident.msgfplus_2021_03_22_parser import (
+from pyiohat.parsers.ident.mascot_2_6_2_parser import Mascot_2_6_2_Parser
+from pyiohat.parsers.ident.msamanda_2_parser import MSAmanda_2_Parser
+from pyiohat.parsers.ident.msfragger_3_parser import MSFragger_3_Parser
+from pyiohat.parsers.ident.msgfplus_2021_03_22_parser import (
     MSGFPlus_2021_03_22_Parser,
 )
-from pyprotista.parsers.ident.omssa_2_1_9_parser import Omssa_Parser
-from pyprotista.parsers.ident.xtandem_alanine import XTandemAlanine_Parser
-from pyprotista.unify import Unify
+from pyiohat.parsers.ident.omssa_2_1_9_parser import Omssa_Parser
+from pyiohat.parsers.ident.xtandem_alanine import XTandemAlanine_Parser
+from pyiohat.unify import Unify
 
 
 def test_unify_get_parser_classes():
@@ -55,10 +55,10 @@ def test_unify_get_parser_classes():
     )
     # Get files and subtract __init__.py
     ident_files = (
-        len(list((Path(pyprotista.__path__[0]) / "parsers" / "ident").glob("*.py"))) - 1
+        len(list((Path(pyiohat.__path__[0]) / "parsers" / "ident").glob("*.py"))) - 1
     )
     quant_files = (
-        len(list((Path(pyprotista.__path__[0]) / "parsers" / "quant").glob("*.py"))) - 1
+        len(list((Path(pyiohat.__path__[0]) / "parsers" / "quant").glob("*.py"))) - 1
     )
     assert len(u._parser_classes) == ident_files + quant_files
 

@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pyprotista.parsers.ident_base_parser import IdentBaseParser
-from pyprotista.utils import merge_and_join_dicts
+from pyiohat.parsers.ident_base_parser import IdentBaseParser
+from pyiohat.utils import merge_and_join_dicts
 
 
 def test_base_parser_read_rt_lookup_file():
