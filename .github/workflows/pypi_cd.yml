@@ -1,7 +1,10 @@
+name: PyPI CD
+
 on:
   create:
     tags:
       - v*
+
 jobs:
   deploy:
     runs-on: ubuntu-latest

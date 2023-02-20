@@ -1,33 +1,53 @@
+name: Build Docs
+
 on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - uses: ammaraskar/sphinx-action@master
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v2
       with:
-        docs-folder: "docs/"
-    - uses: actions/upload-artifact@v1
-      with:
-        name: DocumentationHTML
-        path: docs/_build/html/
-    - name: Commit documentation changes
+        python-version: '3.10'
+    - name: Install pyiohat
+      run: pip install .
+    - name: Install Sphinx
       run: |
-        git clone https://github.com/computational-ms/pyProtista.git --branch gh-pages --single-branch gh-pages
+        pip install sphinx
+        pip install sphinx-rtd-theme
+    - name: Build documentation using Sphinx
+      run: |
+        mkdir static_docs
+        mv docs/*.rst static_docs/ || true
+        rm -r docs
+        mkdir docs
+        cd docs
+        sphinx-quickstart -p pyiohat -a "$(awk '{print $1,$2}' ../AUTHORS.TXT | paste -s -d, - | sed -e 's/,/, /g')" -v ${{ github.ref_name }} -l en --no-sep -q --ext-autodoc --extensions sphinx_rtd_theme
+        mv ../static_docs/*.rst . || true
+        rm -r ../static_docs
+        sed -E "s/(html_theme =) .*/\1 'sphinx_rtd_theme'/" conf.py > tmp.py
+        mv tmp.py conf.py
+        sphinx-apidoc -o source/ ../pyiohat
+        make html
+    - name: Checkout Github Pages branch
+      uses: actions/checkout@v3
+      with:
+        ref: gh-pages
+        path: gh-pages
+    - name: Commit and push documentation changes
+      run: |
         cp -r docs/_build/html/* gh-pages/
         cd gh-pages
         touch .nojekyll
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
+        git config user.email "action@github.com"
+        git config user.name "GitHub Action"
         git add .
         git commit -m "Update documentation" -a || true
-    - name: Push changes
-      uses: ad-m/github-push-action@master
-      with:
-        branch: gh-pages
-        directory: gh-pages
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+        git push
