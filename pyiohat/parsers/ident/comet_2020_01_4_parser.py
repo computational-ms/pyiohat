@@ -120,9 +120,9 @@ class Comet_2020_01_4_Parser(IdentBaseParser):
         for event, entry in etree.iterparse(self.input_file):
             entry_tag = entry.tag
 
-            if entry_tag.endswith("DBSequence"):
+            if entry_tag.endswith("PeptideSequence"):
                 peptide_information = True
-            elif peptide_information is True:
+            if peptide_information is True:
                 if entry_tag.endswith("PeptideSequence"):
                     sequence = entry.text
                     if len(self.fixed_mods) > 0:
@@ -160,9 +160,9 @@ class Comet_2020_01_4_Parser(IdentBaseParser):
         for event, entry in etree.iterparse(self.input_file):
             entry_tag = entry.tag
 
-            if entry_tag.endswith("Inputs"):
+            if entry_tag.endswith("PeptideEvidenceRef"):
                 spec_information = True
-            elif spec_information is True:
+            if spec_information is True:
                 if entry_tag.endswith("cvParam"):
                     if entry.attrib["name"] in self.mapping_dict:
                         _key = self.mapping_dict[entry.attrib["name"]]
