@@ -38,14 +38,18 @@ def get_atom_counts(sequences, modifications, compositions):
                 np.char.count(sequences, aa_or_mod), ordered_element_multiplier
             )
         else:
-            escaped_mod_name = re.escape(aa_or_mod)
-            mod_count = len(
-                re.findall(
-                    rf"(^{escaped_mod_name}:\d+);|;({escaped_mod_name}:\d+);|;({escaped_mod_name}:\d+$)",
-                    modifications[0],
+            mod_counts = []
+            for mod in modifications:
+                escaped_mod_name = re.escape(aa_or_mod)
+                mod_counts.append(
+                    len(
+                        re.findall(
+                            rf"(^{escaped_mod_name}:\d+);|;({escaped_mod_name}:\d+);|;({escaped_mod_name}:\d+$)|^({escaped_mod_name}:\d+)$",
+                            mod,
+                        )
+                    )
                 )
-            )
-            atom_counts += np.outer([mod_count], ordered_element_multiplier)
+            atom_counts += np.outer(mod_counts, ordered_element_multiplier)
     # Remove water (peptide bonds)
     water = np.zeros(shape=(1, len(elements)), dtype=int)
     water[0, elements.index("H")] = 2
