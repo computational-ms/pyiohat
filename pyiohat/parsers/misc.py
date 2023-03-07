@@ -39,12 +39,15 @@ def get_atom_counts(sequences, modifications, compositions):
             )
         else:
             mod_counts = []
+            escaped_mod_name = re.escape(aa_or_mod)
+            search_pattern = re.compile(
+                rf"(^{escaped_mod_name}:\d+)(?=;)|(?<=;)({escaped_mod_name}:\d+)(?=;)|(?<=;)({escaped_mod_name}:\d+$)|^({escaped_mod_name}:\d+)$"
+            )
             for mod in modifications:
-                escaped_mod_name = re.escape(aa_or_mod)
                 mod_counts.append(
                     len(
                         re.findall(
-                            rf"(^{escaped_mod_name}:\d+);|;({escaped_mod_name}:\d+);|;({escaped_mod_name}:\d+$)|^({escaped_mod_name}:\d+)$",
+                            search_pattern,
                             mod,
                         )
                     )
