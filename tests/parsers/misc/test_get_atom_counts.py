@@ -12,7 +12,7 @@ def test_simple():
         [
             "",
             "",
-            "Magic:2",
+            "Magic:1",
         ],
         dtype=str,
     )
