@@ -1,4 +1,4 @@
-file,spectrum_id,rt,rt_unit,precursor_mz
+lineage_root,spectrum_id,rt,rt_unit,precursor_mz
 path/for/glory.mzML,2442,1503.96166992188,second,
 path/for/glory.mzML,2443,1508.63952636719,second,
 path/for/glory.mzML,2444,1509.01611328125,second,
