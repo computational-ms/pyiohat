@@ -16,6 +16,9 @@
   <DBSequence length="607" searchDatabase_ref="SearchDB_1" accession="sp|P02769|ALBU_BOVIN" id="DBSeq1">
     <cvParam cvRef="PSI-MS" accession="MS:1001088" name="protein description" value="sp|P02769|ALBU_BOVIN Serum albumin OS=Bos taurus GN=ALB PE=1 SV=4"/>
   </DBSequence>
+  <DBSequence length="608" searchDatabase_ref="SearchDB_1" accession="sp|P02769|ALBU2_BOVIN" id="DBSeq1">
+    <cvParam cvRef="PSI-MS" accession="MS:1001089" name="protein description" value="sp|P02769|ALBU2_BOVIN Serum albumin OS=Bos taurus GN=ALB PE=1 SV=4"/>
+  </DBSequence>
   <Peptide id="Pep_YICDNQDTISSK">
     <PeptideSequence>YICDNQDTISSK</PeptideSequence>
     <Modification location="3" monoisotopicMassDelta="57.021464">

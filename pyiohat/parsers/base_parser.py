@@ -110,7 +110,7 @@ class BaseParser:
                 else:
                     precursor_mz = float(row["precursor_mz"])
                 rt_lookup[int(row["spectrum_id"])][rt] = [
-                    row["file"],
+                    row["lineage_root"],
                     precursor_mz,
                 ]
         return rt_lookup

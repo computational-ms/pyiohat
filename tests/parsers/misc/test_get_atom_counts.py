@@ -12,7 +12,7 @@ def test_simple():
         [
             "",
             "",
-            "Magic",
+            "Magic:1",
         ],
         dtype=str,
     )
@@ -43,7 +43,7 @@ def test_negative():
     }
     modifications = np.array(
         [
-            "Magic",
+            "Magic:1",
         ],
         dtype=str,
     )

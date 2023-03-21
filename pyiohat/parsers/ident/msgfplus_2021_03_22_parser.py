@@ -85,9 +85,9 @@ class MSGFPlus_2021_03_22_Parser(IdentBaseParser):
         for event, entry in etree.iterparse(self.input_file):
             entry_tag = entry.tag
 
-            if entry_tag.endswith("DBSequence"):
+            if entry_tag.endswith("PeptideSequence"):
                 peptide_information = True
-            elif peptide_information is True:
+            if peptide_information is True:
                 if entry_tag.endswith("PeptideSequence"):
                     sequence = {"sequence": entry.text}
                 elif entry_tag.endswith("cvParam"):

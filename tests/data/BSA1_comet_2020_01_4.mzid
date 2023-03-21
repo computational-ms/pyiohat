@@ -13,6 +13,7 @@
  </AnalysisSoftwareList>
  <SequenceCollection xmlns="http://psidev.info/psi/pi/mzIdentML/1.2">
  <DBSequence id="sp|P02769|ALBU_BOVIN" accession="sp|P02769|ALBU_BOVIN" searchDatabase_ref="DB0" />
+ <DBSequence id="sp|P02760|ALBU_BOVIN2" accession="sp|P02769|ALBU_BOVIN2" searchDatabase_ref="DB1" />
  <Peptide id="AEFVEVTK;">
   <PeptideSequence>AEFVEVTK</PeptideSequence>
  </Peptide>

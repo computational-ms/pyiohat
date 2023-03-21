@@ -96,10 +96,21 @@ class Comet_2020_01_4_Parser(IdentBaseParser):
                 if entry_tag.endswith("cvParam"):
                     mod_name = entry.attrib["name"]
                 elif entry_tag.endswith("SearchModification"):
+                    if mod_name == "unknown modification":
+                        potential_mod = self.mod_mapper.mass_to_names(
+                            float(entry.attrib["massDelta"]), decimals=4
+                        )
+                        if len(potential_mod) == 0:
+                            logger.error(
+                                f"Cannot map modification with mass {entry.attrib['massDelta']}."
+                            )
+                            raise ValueError
+                        else:
+                            mod_name = potential_mod[0]
                     mod_mass_map[entry.attrib["massDelta"]] = mod_name
                     if entry.attrib["fixedMod"] == "true":
-                        _key = entry.attrib["residues"]
-                        fixed_mods[_key] = mod_name
+                        residue = entry.attrib["residues"]
+                        fixed_mods[residue] = mod_name
                 elif entry_tag.endswith("ModificationParams"):
                     break
             entry.clear()
@@ -120,9 +131,9 @@ class Comet_2020_01_4_Parser(IdentBaseParser):
         for event, entry in etree.iterparse(self.input_file):
             entry_tag = entry.tag
 
-            if entry_tag.endswith("DBSequence"):
+            if entry_tag.endswith("PeptideSequence"):
                 peptide_information = True
-            elif peptide_information is True:
+            if peptide_information is True:
                 if entry_tag.endswith("PeptideSequence"):
                     sequence = entry.text
                     if len(self.fixed_mods) > 0:
@@ -160,9 +171,9 @@ class Comet_2020_01_4_Parser(IdentBaseParser):
         for event, entry in etree.iterparse(self.input_file):
             entry_tag = entry.tag
 
-            if entry_tag.endswith("Inputs"):
+            if entry_tag.endswith("PeptideEvidenceRef"):
                 spec_information = True
-            elif spec_information is True:
+            if spec_information is True:
                 if entry_tag.endswith("cvParam"):
                     if entry.attrib["name"] in self.mapping_dict:
                         _key = self.mapping_dict[entry.attrib["name"]]
