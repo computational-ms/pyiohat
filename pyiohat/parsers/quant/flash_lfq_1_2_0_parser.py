@@ -103,6 +103,18 @@ class FlashLFQ_1_2_0_Parser(QuantBaseParser):
         self.df["fwhm"] = -1
         self.df["label"] = "LabelFree"
         self.df["quant_group"] = ""
+        self.df["ccs"] = -1
+
+        accuracy = (
+            self.df.loc[
+                self.df["flashlfq:peak_mz"] != "-", "flashlfq:theoretical_mz"
+            ].astype(float)
+            - self.df.loc[
+                self.df["flashlfq:peak_mz"] != "-", "flashlfq:peak_mz"
+            ].astype(float)
+        ) * 1e6
+        self.df.loc[self.df["flashlfq:peak_mz"] != "-", "accuracy_ppm"] = accuracy
+        self.df.loc[self.df["flashlfq:peak_mz"] == "-", "accuracy_ppm"] = -1
 
         self.get_chemical_composition()
         self.get_meta_info()

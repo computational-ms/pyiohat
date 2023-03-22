@@ -20,5 +20,5 @@ class QuantBaseParser(BaseParser):
     def process_unify_style(self):
         """Apply sanitizing methods."""
         # TODO: this should be called here too
-        # self.sanitize()
+        self.sanitize()
         pass
