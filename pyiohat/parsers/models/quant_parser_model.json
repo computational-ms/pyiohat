@@ -5,6 +5,16 @@
     "dtype": "str"
   },
   {
+    "name": "reported_mz",
+    "description": "mz reported by quant engine",
+    "dtype": "float"
+  },
+  {
+    "name": "theoretical_mz",
+    "description": "theoretical mz of quantified molecule",
+    "dtype": "float"
+  },
+  {
     "name": "quant_value",
     "description": "Quantification result value",
     "dtype": "float32"
@@ -20,9 +30,9 @@
     "dtype": "str"
   },
   {
-  "name": "accuracy_mz",
-  "description": "Numerical difference between theoretical and measured m/z (old delta_mz)",
-  "dtype": "float32"
+    "name": "accuracy_mz",
+    "description": "Numerical difference between theoretical and measured m/z (old delta_mz)",
+    "dtype": "float32"
   },
   {
     "name": "label",
@@ -43,5 +53,10 @@
     "name": "fwhm",
     "description": "Full width at half maximum",
     "dtype": "float32"
+  },
+  {
+    "name": "quant_engine",
+    "description": "Name of the quantification engine.",
+    "dtype": "str"
   }
 ]

@@ -45,3 +45,4 @@ def test_engine_parsers_tmt_quant_unify_row():
     assert len(df) == 7
     assert pytest.approx(df["retention_time_seconds"].mean()) == 781.94380
     assert pytest.approx(df["quant_value"].mean()) == 249596.16588
+    assert pytest.approx(df["accuracy_mz"].mean()) == 0.009146615862846

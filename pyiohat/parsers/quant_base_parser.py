@@ -20,5 +20,25 @@ class QuantBaseParser(BaseParser):
     def process_unify_style(self):
         """Apply sanitizing methods."""
         # TODO: this should be called here too
+        self.calculate_accuracy()
         self.sanitize()
-        pass
+
+    def calculate_accuracy(self):
+        accuracy_mz = self.df.loc[
+            self.df["reported_mz"] != "-", "theoretical_mz"
+        ].astype(float) - self.df.loc[
+            self.df["reported_mz"] != "-", "reported_mz"
+        ].astype(
+            float
+        )
+        accuracy_ppm = (
+            (accuracy_mz)
+            / self.df.loc[self.df["reported_mz"] != "-", "reported_mz"].astype(float)
+        ) * 1e6
+        self.df.loc[self.df["reported_mz"] != "-", "accuracy_ppm"] = accuracy_ppm
+        self.df.loc[self.df["reported_mz"] == "-", "accuracy_ppm"] = -1
+        self.df.loc[self.df["reported_mz"] == "-", "reported_ppm"] = -1
+
+        self.df.loc[self.df["reported_mz"] != "-", "accuracy_mz"] = accuracy_mz
+        self.df.loc[self.df["reported_mz"] == "-", "accuracy_mz"] = -1
+        self.df.loc[self.df["reported_mz"] == "-", "reported_mz"] = -1

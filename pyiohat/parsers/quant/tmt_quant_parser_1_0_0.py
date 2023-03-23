@@ -12,33 +12,34 @@ from pyiohat.parsers.misc import get_compositions_and_monoisotopic_masses
 class TMTQuantParser(QuantBaseParser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.style = "tmt_quant_style_1"
         self.df = pd.read_csv(self.input_file)
 
-        # self.mapping_dict = {
-        #     v: k
-        #     for k, v in self.param_mapper.get_default_params(style=self.style)[
-        #         "header_translations"
-        #     ]["translated_value"].items()
-        # }
-
         self.mapping_dict = {
-            # rename to model
-            "filename": "lineage_root",
-            "spectrum_id": "spectrum_id",
-            "retention_time_seconds": "retention_time_seconds",
-            "ppm": "accuracy_mz",
-            "quant_value": "quant_value",
-            "label": "label",
-            # additional_columns
-            "mz": "tmt_quant:mz",
-            "mz_delta": "tmt_quant:mz_delta",
-            "raw_quant_area": "tmt_quant:raw_quant_area",
-            "raw_quant_intensity": "tmt_quant:raw_quant_intensity",
-            "iso_mz": "tmt_quant:iso_mz",
-            "isolabel_id": "tmt_quant:isolabel_id",
-            "s2i": "tmt_quant:s2i",
-            "original_quant_value": "tmt_quant:original_quant_value",
+            v: k
+            for k, v in self.param_mapper.get_default_params(style=self.style)[
+                "header_translations"
+            ]["translated_value"].items()
         }
+
+        # self.mapping_dict = {
+        #     # rename to model
+        #     "filename": "lineage_root",
+        #     "spectrum_id": "spectrum_id",
+        #     "retention_time_seconds": "retention_time_seconds",
+        #     "ppm": "accuracy_mz",
+        #     "quant_value": "quant_value",
+        #     "label": "label",
+        #     # additional_columns
+        #     "mz": "tmt_quant:mz",
+        #     "mz_delta": "tmt_quant:mz_delta",
+        #     "raw_quant_area": "tmt_quant:raw_quant_area",
+        #     "raw_quant_intensity": "tmt_quant:raw_quant_intensity",
+        #     "iso_mz": "tmt_quant:iso_mz",
+        #     "isolabel_id": "tmt_quant:isolabel_id",
+        #     "s2i": "tmt_quant:s2i",
+        #     "original_quant_value": "tmt_quant:original_quant_value",
+        # }
         self.df.rename(columns=self.mapping_dict, inplace=True)
 
     @classmethod
@@ -52,7 +53,7 @@ class TMTQuantParser(QuantBaseParser):
         header = set(header.rstrip("\n").split(","))
 
         ref_columns = {
-            # "filename",
+            "filename",
             "mz",
             "raw_quant_intensity",
             "retention_time_seconds",
@@ -89,5 +90,8 @@ class TMTQuantParser(QuantBaseParser):
         self.df["ccs"] = -1
         self.df["ident_reference"] = -1
         self.df["fwhm"] = -1
+        self.df["quant_engine"] = "TMTQuant_1_0_0"
         self.process_unify_style()
+        # required columns for recalculation not in dataframe
+        self.df["accuracy_ppm"] = -1
         return self.df
