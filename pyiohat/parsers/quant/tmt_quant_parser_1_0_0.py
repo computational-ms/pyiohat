@@ -21,25 +21,6 @@ class TMTQuantParser(QuantBaseParser):
                 "header_translations"
             ]["translated_value"].items()
         }
-
-        # self.mapping_dict = {
-        #     # rename to model
-        #     "filename": "lineage_root",
-        #     "spectrum_id": "spectrum_id",
-        #     "retention_time_seconds": "retention_time_seconds",
-        #     "ppm": "accuracy_mz",
-        #     "quant_value": "quant_value",
-        #     "label": "label",
-        #     # additional_columns
-        #     "mz": "tmt_quant:mz",
-        #     "mz_delta": "tmt_quant:mz_delta",
-        #     "raw_quant_area": "tmt_quant:raw_quant_area",
-        #     "raw_quant_intensity": "tmt_quant:raw_quant_intensity",
-        #     "iso_mz": "tmt_quant:iso_mz",
-        #     "isolabel_id": "tmt_quant:isolabel_id",
-        #     "s2i": "tmt_quant:s2i",
-        #     "original_quant_value": "tmt_quant:original_quant_value",
-        # }
         self.df.rename(columns=self.mapping_dict, inplace=True)
 
     @classmethod
