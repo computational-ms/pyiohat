@@ -12,7 +12,7 @@ from pyiohat.parsers.misc import get_compositions_and_monoisotopic_masses
 class TMTQuantParser(QuantBaseParser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.style = "tmt_quant_style_1"
+        self.style = "cz_tmt_quant_style_1"
         self.df = pd.read_csv(self.input_file)
 
         self.mapping_dict = {
