@@ -96,17 +96,21 @@ class FlashLFQ_1_2_0_Parser(QuantBaseParser):
         # raise NotImplementedError
         # do column conversion here
         self.df["spectrum_id"] = -1
-        self.df["linked_spectrum_id"] = -1
+        self.df["ident_reference"] = -1
         self.df["retention_time_seconds"] = -1
         self.df["accuracy_ppm_C12"] = -1
         self.df["quant_score"] = -1
         self.df["fwhm"] = -1
         self.df["label"] = "LabelFree"
         self.df["quant_group"] = ""
+        self.df["ccs"] = -1
+        self.df.loc[self.df["flashlfq:mbr_score"].isna(), "flashlfq:mbr_score"] = -1
 
         self.get_chemical_composition()
         self.get_meta_info()
+        self.calculate_accuracy()
         self.df["quant_run_id"] = "FlashLFQ"
+        self.df["quant_engines"] = "FlashLFQ_1_2_0"
 
         self.process_unify_style()
         return self.df
@@ -118,7 +122,7 @@ class FlashLFQ_1_2_0_Parser(QuantBaseParser):
         )
         rounded_rts = pd.DataFrame({"file": self.df["raw_filename"], "rt": rounded_rts})
 
-        self.df["linked_spectrum_id"] = [
+        self.df["ident_reference"] = [
             self.rt_to_spec_id[f][r] for i, (f, r) in rounded_rts.iterrows()
         ]
 
