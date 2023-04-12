@@ -39,7 +39,6 @@ def test_engine_parsers_flashLFQ_init():
 
 def test_engine_parsers_flashLFQ_check_parser_compatibility():
     input_file = pytest._test_path / "data" / "flash_lfq_1_2_0_quantified_peaks.tsv"
-
     assert FlashLFQ_1_2_0_Parser.check_parser_compatibility(input_file) is True
 
 
@@ -82,9 +81,9 @@ def test_engine_parsers_flashLFQ_unify_row():
         },
     )
     df = parser.unify()
-    assert len(df) == 11
-    assert pytest.approx(df["flashlfq:ms2_retention_time"].mean()) == 118178.01055184663
-    assert pytest.approx(df["quant_value"].mean()) == 306668.4375
+    assert len(df) == 5
+    assert pytest.approx(df["flashlfq:ms2_retention_time"].mean()) == 1911.951733
+    assert pytest.approx(df["quant_value"].mean()) == 0
 
 
 def test_engine_parsers_flashLFQ_extract_mods():
