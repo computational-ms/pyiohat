@@ -121,11 +121,7 @@ class XTandemAlanine_Parser(IdentBaseParser):
         unique_mods = set().union(*df["modifications"].apply(set).values)
         unique_mod_masses = {m.split(":")[0] for m in unique_mods}
         potential_names = {
-            m: [
-                name
-                for name in self.mod_mapper.mass_to_names(float(m), decimals=4)
-                if name in self.mod_dict
-            ]
+            m: [name for name in self.mod_mapper.mass_to_names(float(m), decimals=4)]
             for m in unique_mod_masses
         }
         mod_translation = {}
@@ -139,12 +135,22 @@ class XTandemAlanine_Parser(IdentBaseParser):
                 for name in potential_mods:
                     # TODO: Is position 'any' respected here
                     in_seq = df["sequence"].str[int(pos)].isin(
-                        self.mod_dict[name]["aa"]
+                        set(self.mod_mapper.query(f"`Name` == '{name}'")["aa"].unique())
                     ) & df["modifications"].str.join("|").str.contains(m)
                     n_term = (~in_seq) & (
                         (
-                            ("N-term" in self.mod_dict[name]["position"])
-                            | ("Prot-N-term" in self.mod_dict[name]["position"])
+                            (
+                                "N-term"
+                                in self.mod_mapper.query(f"`Name` == '{name}'")[
+                                    "position"
+                                ].to_list()
+                            )
+                            | (
+                                "Prot-N-term"
+                                in self.mod_mapper.query(f"`Name` == '{name}'")[
+                                    "position"
+                                ].to_list()
+                            )
                         )
                         & df["modifications"].str.join("|").str.contains(m)
                     )

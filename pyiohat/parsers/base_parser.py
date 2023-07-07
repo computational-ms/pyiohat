@@ -33,7 +33,8 @@ class BaseParser:
         self.params["mapped_mods"] = self.mod_mapper.map_mods(
             mod_list=self.params.get("modifications", [])
         )
-        self.mod_dict = self._create_mod_dicts()
+        self.mod_mapper.read_mapped_mods_as_df(self.params["mapped_mods"])
+        # self.mod_dict = self._create_mod_dicts()
         self.cc = ChemicalComposition(
             unimod_file_list=self.params.get("xml_file_list", None)
         )
@@ -62,32 +63,6 @@ class BaseParser:
         model_definition = {item["name"]: item["dtype"] for item in model_definition}
         return model_definition
 
-    def _create_mod_dicts(self):
-        """
-        Create dict containing meta information about static and variable mods.
-
-        Returns:
-            mod_dict (dict): mapped modifications and information
-        """
-        mod_dict = {}
-        for mod_type in ["fix", "opt"]:
-            for modification in self.params["mapped_mods"][mod_type]:
-                aa = modification["aa"]
-                pos = modification["position"]
-                name = modification["name"]
-                if name not in mod_dict.keys():
-                    mod_dict[name] = {
-                        "mass": modification["mass"],
-                        "aa": set(),
-                        "position": set(),
-                    }
-                mod_dict[name]["aa"].add(aa)
-
-                mod_dict[name]["aa"].add(pos)
-                mod_dict[name]["position"].add(pos)
-
-        return mod_dict
-
     def _read_meta_info_lookup_file(self):
         """Read meta info lookup file.
 
@@ -97,6 +72,7 @@ class BaseParser:
                                            values are lists with [file, precursor_mz]
         """
         rt_lookup = {}
+        print(self.params["rt_pickle_name"])
         with open(self.params["rt_pickle_name"], mode="r") as meta_csv:
             meta_reader = csv.DictReader(meta_csv)
             for row in meta_reader:

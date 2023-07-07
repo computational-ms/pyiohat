@@ -19,7 +19,7 @@ from pyiohat.parsers.misc import (
 )
 from pyiohat.utils import merge_and_join_dicts
 
-mp.set_start_method(method="fork")
+mp.set_start_method(method="spawn")
 
 
 class IdentBaseParser(BaseParser):
@@ -36,13 +36,12 @@ class IdentBaseParser(BaseParser):
         self.IUPAC_AAS = tuple("ACDEFGHIKLMNPQRSTUVWY")
         self.df = None
 
-        successfully_mapped_mods = set(
+        self.successfully_mapped_mods = set(
             mod["name"] for mod in self.params["mapped_mods"]["fix"]
         ) | set(mod["name"] for mod in self.params["mapped_mods"]["opt"])
         self.non_mappable_mods = set(
             mod["name"] for mod in self.params.get("modifications", [])
-        ).difference(successfully_mapped_mods)
-        self.mod_dict = self._create_mod_dicts()
+        ).difference(self.successfully_mapped_mods)
         self.rt_truncate_precision = 2
         self.reference_dict = {
             "search_engine": None,
@@ -215,7 +214,7 @@ class IdentBaseParser(BaseParser):
         for aa in self.IUPAC_AAS:
             self.cc.use(sequence=aa)
             all_compositions[aa] = self.cc.copy()
-        for mod in self.mod_dict.keys():
+        for mod in self.successfully_mapped_mods:
             all_compositions[mod] = self.mod_mapper.name_to_composition(mod)[0]
 
         compositions, mono_masses = get_compositions_and_monoisotopic_masses(
