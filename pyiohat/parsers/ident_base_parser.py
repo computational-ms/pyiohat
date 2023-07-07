@@ -19,7 +19,7 @@ from pyiohat.parsers.misc import (
 )
 from pyiohat.utils import merge_and_join_dicts
 
-mp.set_start_method(method="spawn")
+mp.set_start_method(method="fork")
 
 
 class IdentBaseParser(BaseParser):
