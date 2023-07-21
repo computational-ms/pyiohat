@@ -33,8 +33,10 @@ class BaseParser:
         self.params["mapped_mods"] = self.mod_mapper.map_mods(
             mod_list=self.params.get("modifications", [])
         )
+        self.mapped_mod_names = set(
+            mod["name"] for mod in self.params["mapped_mods"]["fix"]
+        ) | set(mod["name"] for mod in self.params["mapped_mods"]["opt"])
         self.mod_mapper.read_mapped_mods_as_df(self.params["mapped_mods"])
-        # self.mod_dict = self._create_mod_dicts()
         self.cc = ChemicalComposition(
             unimod_file_list=self.params.get("xml_file_list", None)
         )

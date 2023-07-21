@@ -288,7 +288,7 @@ def test_mapped_mods():
             ],
         },
     )
-    mapped_mods = obj.successfully_mapped_mods
+    mapped_mods = obj.mapped_mod_names
     reference_set = set(["Acetyl", "Carbamidomethyl", "NewModNr1"])
     assert mapped_mods == reference_set
 

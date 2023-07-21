@@ -136,7 +136,7 @@ class FlashLFQ_1_2_0_Parser(QuantBaseParser):
         for aa in self.IUPAC_AAS:
             self.cc.use(sequence=aa)
             all_compositions[aa] = self.cc.copy()
-        for mod in self.successfully_mapped_mods:
+        for mod in self.mapped_mod_names:
             all_compositions[mod] = self.mod_mapper.name_to_composition(mod)[0]
 
         compositions, mono_masses = get_compositions_and_monoisotopic_masses(

@@ -36,12 +36,9 @@ class IdentBaseParser(BaseParser):
         self.IUPAC_AAS = tuple("ACDEFGHIKLMNPQRSTUVWY")
         self.df = None
 
-        self.successfully_mapped_mods = set(
-            mod["name"] for mod in self.params["mapped_mods"]["fix"]
-        ) | set(mod["name"] for mod in self.params["mapped_mods"]["opt"])
         self.non_mappable_mods = set(
             mod["name"] for mod in self.params.get("modifications", [])
-        ).difference(self.successfully_mapped_mods)
+        ).difference(self.mapped_mod_names)
         self.rt_truncate_precision = 2
         self.reference_dict = {
             "search_engine": None,
@@ -214,7 +211,7 @@ class IdentBaseParser(BaseParser):
         for aa in self.IUPAC_AAS:
             self.cc.use(sequence=aa)
             all_compositions[aa] = self.cc.copy()
-        for mod in self.successfully_mapped_mods:
+        for mod in self.mapped_mod_names:
             all_compositions[mod] = self.mod_mapper.name_to_composition(mod)[0]
 
         compositions, mono_masses = get_compositions_and_monoisotopic_masses(
