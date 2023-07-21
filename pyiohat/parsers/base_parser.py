@@ -72,7 +72,6 @@ class BaseParser:
                                            values are lists with [file, precursor_mz]
         """
         rt_lookup = {}
-        print(self.params["rt_pickle_name"])
         with open(self.params["rt_pickle_name"], mode="r") as meta_csv:
             meta_reader = csv.DictReader(meta_csv)
             for row in meta_reader:
