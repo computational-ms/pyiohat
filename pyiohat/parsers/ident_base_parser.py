@@ -19,7 +19,8 @@ from pyiohat.parsers.misc import (
 )
 from pyiohat.utils import merge_and_join_dicts
 
-mp.set_start_method(method="fork")
+if __name__ == '__main__':
+    mp.set_start_method(method="fork")
 
 
 class IdentBaseParser(BaseParser):
