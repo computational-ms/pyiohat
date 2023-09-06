@@ -19,6 +19,7 @@ from pyiohat.parsers.misc import (
 )
 from pyiohat.utils import merge_and_join_dicts
 
+
 if __name__ == '__main__':
     mp.set_start_method(method="fork")
 
