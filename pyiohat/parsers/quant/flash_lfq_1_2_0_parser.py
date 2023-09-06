@@ -120,7 +120,7 @@ class FlashLFQ_1_2_0_Parser(QuantBaseParser):
             round, args=(self.round_precision,)
         )
         rounded_rts = pd.DataFrame(
-            {"file": self.df["raw_filename"], "rt": rounded_rts}
+            {"file": self.df["raw_data_location"], "rt": rounded_rts}
         )
 
         self.df["ident_reference"] = [
