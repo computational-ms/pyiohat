@@ -119,7 +119,9 @@ class FlashLFQ_1_2_0_Parser(QuantBaseParser):
         rounded_rts = (self.df["flashlfq:ms2_retention_time"]).apply(
             round, args=(self.round_precision,)
         )
-        rounded_rts = pd.DataFrame({"file": self.df["raw_filename"], "rt": rounded_rts})
+        rounded_rts = pd.DataFrame(
+            {"file": self.df["raw_data_location"], "rt": rounded_rts}
+        )
 
         self.df["ident_reference"] = [
             self.rt_to_spec_id[f][r] for i, (f, r) in rounded_rts.iterrows()
