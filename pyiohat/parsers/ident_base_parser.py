@@ -19,7 +19,10 @@ from pyiohat.parsers.misc import (
 )
 from pyiohat.utils import merge_and_join_dicts
 
-mp.set_start_method(method="fork")
+try:
+    mp.set_start_method(method="fork")
+except RuntimeError:
+    logger.warning("MP fork already set")
 
 
 class IdentBaseParser(BaseParser):
