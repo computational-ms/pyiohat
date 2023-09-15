@@ -260,7 +260,7 @@ def test_get_exp_rt_and_mz():
     )
 
 
-def test_create_mod_dicts():
+def test_mapped_mods():
     obj = IdentBaseParser(
         input_file=None,
         params={
@@ -278,19 +278,19 @@ def test_create_mod_dicts():
                     "position": "any",
                     "name": "Carbamidomethyl",
                 },
+                {
+                    "aa": "N",
+                    "type": "opt",
+                    "position": "any",
+                    "name": "NewModNr1",
+                    "composition": {"C": 12, "H": 34, "O": 56},
+                },
             ],
         },
     )
-    mod_dict = obj._create_mod_dicts()
-    reference_dict = {
-        "Carbamidomethyl": {"mass": 57.021464, "aa": {"C", "any"}, "position": {"any"}},
-        "Acetyl": {
-            "mass": 42.010565,
-            "aa": {"Prot-N-term", "*"},
-            "position": {"Prot-N-term"},
-        },
-    }
-    assert mod_dict == reference_dict
+    mapped_mods = obj.mapped_mod_names
+    reference_set = set(["Acetyl", "Carbamidomethyl", "NewModNr1"])
+    assert mapped_mods == reference_set
 
 
 def test_calc_mz():

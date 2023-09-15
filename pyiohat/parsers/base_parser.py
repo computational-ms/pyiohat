@@ -33,7 +33,10 @@ class BaseParser:
         self.params["mapped_mods"] = self.mod_mapper.map_mods(
             mod_list=self.params.get("modifications", [])
         )
-        self.mod_dict = self._create_mod_dicts()
+        self.mapped_mod_names = set(
+            mod["name"] for mod in self.params["mapped_mods"]["fix"]
+        ) | set(mod["name"] for mod in self.params["mapped_mods"]["opt"])
+        self.mod_mapper.read_mapped_mods_as_df(self.params["mapped_mods"])
         self.cc = ChemicalComposition(
             unimod_file_list=self.params.get("xml_file_list", None)
         )
@@ -61,32 +64,6 @@ class BaseParser:
             model_definition.extend(json.load(jf))
         model_definition = {item["name"]: item["dtype"] for item in model_definition}
         return model_definition
-
-    def _create_mod_dicts(self):
-        """
-        Create dict containing meta information about static and variable mods.
-
-        Returns:
-            mod_dict (dict): mapped modifications and information
-        """
-        mod_dict = {}
-        for mod_type in ["fix", "opt"]:
-            for modification in self.params["mapped_mods"][mod_type]:
-                aa = modification["aa"]
-                pos = modification["position"]
-                name = modification["name"]
-                if name not in mod_dict.keys():
-                    mod_dict[name] = {
-                        "mass": modification["mass"],
-                        "aa": set(),
-                        "position": set(),
-                    }
-                mod_dict[name]["aa"].add(aa)
-
-                mod_dict[name]["aa"].add(pos)
-                mod_dict[name]["position"].add(pos)
-
-        return mod_dict
 
     def _read_meta_info_lookup_file(self):
         """Read meta info lookup file.

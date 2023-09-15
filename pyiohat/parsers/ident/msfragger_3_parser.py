@@ -103,8 +103,16 @@ class MSFragger_3_Parser(IdentBaseParser):
             if len(name) > 0:
                 for m in name:
                     pos = int(re.search(r"^\d+", mod).group(0))
+                    # TO DO: Does this work if same mod at pos 0 and 1? E.g. TMT
                     if (
-                        any(["N-term" in p for p in self.mod_dict[m]["position"]])
+                        any(
+                            [
+                                "N-term" in p
+                                for p in self.mod_mapper.query(f"`Name` == '{m}'")[
+                                    "position"
+                                ].to_list()
+                            ]
+                        )
                         and pos == 1
                     ):
                         pos = 0
@@ -127,11 +135,7 @@ class MSFragger_3_Parser(IdentBaseParser):
         unique_mod_masses = {re.search(r"\(([^)]+)", m).group(1) for m in unique_mods}
         # Map single mods
         potential_names = {
-            m: [
-                name
-                for name in self.mod_mapper.mass_to_names(float(m), decimals=4)
-                if name in self.mod_dict
-            ]
+            m: [name for name in self.mod_mapper.mass_to_names(float(m), decimals=4)]
             for m in unique_mod_masses
         }
         # Map multiple mods
@@ -142,7 +146,6 @@ class MSFragger_3_Parser(IdentBaseParser):
                     for name in self.mod_mapper.mass_to_combos(
                         float(unmapped_mass), n=n, decimals=4
                     )
-                    if all(m in self.mod_dict for m in name[1])
                 ]
                 if len(potential_mods) == 1:
                     potential_names[unmapped_mass] = potential_mods[0]
