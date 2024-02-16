@@ -1,4 +1,5 @@
 """Ident base parser class."""
+
 import csv
 import multiprocessing as mp
 

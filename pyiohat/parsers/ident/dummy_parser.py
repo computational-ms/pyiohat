@@ -1,4 +1,5 @@
 """Dummy parser."""
+
 from pyiohat.parsers.ident_base_parser import IdentBaseParser
 
 
