@@ -25,7 +25,7 @@ def branch_dependent_version():
         "root": ".",
         "relative_to": __file__,
         "version_scheme": version_scheme,
-        "local_scheme": local_scheme
+        "local_scheme": local_scheme,
         # >> "no-local-version" not quit good enough
         # >> on dev "node-and-timestamp",  # version_scheme,
     }

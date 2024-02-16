@@ -1,4 +1,5 @@
 """Parser handler."""
+
 import csv
 import json
 from pathlib import Path

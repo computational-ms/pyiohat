@@ -1,4 +1,5 @@
 """Engine parser."""
+
 import xml.etree.ElementTree as etree
 
 import pandas as pd
@@ -99,9 +100,9 @@ class MSGFPlus_2021_03_22_Parser(IdentBaseParser):
                     cv_param_modifications += entry.attrib["location"] + ";"
                 elif entry_tag.endswith("Peptide"):
                     peptide_lookup[entry.attrib["id"]] = sequence
-                    peptide_lookup[entry.attrib["id"]][
-                        "modifications"
-                    ] = cv_param_modifications.rstrip(";")
+                    peptide_lookup[entry.attrib["id"]]["modifications"] = (
+                        cv_param_modifications.rstrip(";")
+                    )
                     cv_param_modifications = ""
                 elif entry_tag.endswith("PeptideEvidence"):
                     break
