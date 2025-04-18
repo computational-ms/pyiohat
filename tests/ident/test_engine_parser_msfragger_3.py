@@ -141,6 +141,7 @@ def test_map_mod_translation_msfragger3():
     )
     assert converted == "Oxidation:3;Oxidation:15;Carbamidomethyl:18;"
 
+
 # Tests for n-term and digits
 def test_c_terminal_tmt():
     input_file = pytest._test_path / "data" / "test_positions_msfragger.tsv"
@@ -189,8 +190,8 @@ def test_c_terminal_tmt():
         },
     )
     converted = parser.translate_mods()
-    assert converted[0] == "TMT6plex:1;TMT6plex:6"
-    assert converted[0] == "TMT6plex:0;"
+    assert converted[0] == "TMT6plex:0;TMT6plex:6"
+    assert converted[1] == "TMT6plex:0"
 
 
 def test_msfragger_open_search():

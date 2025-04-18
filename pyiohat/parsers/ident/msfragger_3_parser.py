@@ -111,18 +111,14 @@ class MSFragger_3_Parser(IdentBaseParser):
                     if str_regex_on_mod is not None:
                         pos = int(re.search(r"^\d+", mod).group(0))
                     # TO DO: Does this work if same mod at pos 0 and 1? E.g. TMT
-                    if (
-                        any(
-                            [
-                                "N-term" in p
-                                for p in self.mod_mapper.query(f"`Name` == '{m}'")[
-                                    "position"
-                                ].to_list()
-                            ]
-                        )
-                        and pos == None
-                        and "N-term" in mod
-                    ):
+                    if any(
+                        [
+                            "N-term" in p
+                            for p in self.mod_mapper.query(f"`Name` == '{m}'")[
+                                "position"
+                            ].to_list()
+                        ]
+                    ) and ((pos == None and "N-term" in mod) or pos == 1):
                         pos = 0
                     else:
                         if pos == None:
