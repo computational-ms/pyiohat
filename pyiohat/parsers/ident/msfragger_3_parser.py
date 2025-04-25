@@ -103,21 +103,26 @@ class MSFragger_3_Parser(IdentBaseParser):
             name = map_dict[mass]
             if len(name) > 0:
                 for m in name:
-                    pos = int(re.search(r"^\d+", mod).group(0))
+                    # if there are digits in mod, process them normally, otherwise check for N-term
+                    str_regex_on_mod = re.search(r"^\d+", mod)
+                    # pos is 1 so rest of the code flows as expected
+                    pos = None
+                    # if digits are found, extract them and override position
+                    if str_regex_on_mod is not None:
+                        pos = int(re.search(r"^\d+", mod).group(0))
                     # TO DO: Does this work if same mod at pos 0 and 1? E.g. TMT
-                    if (
-                        any(
-                            [
-                                "N-term" in p
-                                for p in self.mod_mapper.query(f"`Name` == '{m}'")[
-                                    "position"
-                                ].to_list()
-                            ]
-                        )
-                        and pos == 1
-                    ):
+                    if any(
+                        [
+                            "N-term" in p
+                            for p in self.mod_mapper.query(f"`Name` == '{m}'")[
+                                "position"
+                            ].to_list()
+                        ]
+                    ) and ((pos == None and "N-term" in mod) or pos == 1):
                         pos = 0
                     else:
+                        if pos == None:
+                            continue
                         pos = int(re.search(r"^\d+", mod).group(0))
                     mod_str += f"{m}:{pos};"
             else:
