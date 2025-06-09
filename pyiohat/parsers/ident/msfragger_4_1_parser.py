@@ -62,7 +62,7 @@ class MSFragger_4_1_Parser(IdentBaseParser):
             "charge",
             "peptide_prev_aa",
             "peptide_next_aa",
-            "protein",
+            "proteins",
             "modification_info",
             "retention_time",
             "precursor_neutral_mass",
