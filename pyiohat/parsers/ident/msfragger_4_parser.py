@@ -203,7 +203,7 @@ class MSFragger_4_Parser(IdentBaseParser):
         for mod in self.params["mapped_mods"]["opt"]:
             if "labile" not in mod.keys():
                 continue
-            glycans[float(mod["mass"])] = f"{mod["name"]}[{mod["mass"]}]"
+            glycans[float(mod['mass'])] = f"{mod['name']}[{mod['mass']}]"
         if glycans == {}:
             return [None] * len(self.df["modifications"])
         masses = list(glycans.keys())
