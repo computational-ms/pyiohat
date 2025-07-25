@@ -113,11 +113,11 @@ def test_add_ranks_increasing_engine_scores_better():
         columns=obj.col_order.to_list() + ["msfragger:hyperscore"],
     )
     obj.metadata = {
-            "File Origin": "MSFragger",
-            "bigger_scores_better": True,
-            "validation_score_field": "msfragger:hyperscore",
-            "Parser": "pyiohat/parsers/ident/msfragger_4_parser.py",
-        }
+        "File Origin": "MSFragger",
+        "bigger_scores_better": True,
+        "validation_score_field": "msfragger:hyperscore",
+        "Parser": "pyiohat/parsers/ident/msfragger_4_parser.py",
+    }
     obj.df["msfragger:hyperscore"] = [5, 2, 1, 3, 3]
     obj.df["search_engine"] = "msfragger_3_0"
     obj.add_ranks()
@@ -137,11 +137,11 @@ def test_add_ranks_decreasing_engine_scores_better():
         columns=obj.col_order.to_list() + ["ms-gf:spec_evalue"],
     )
     obj.metadata = {
-            "File Origin": "MSGFPlus",
-            "bigger_scores_better": False,
-            "validation_score_field": "ms-gf:spec_evalue",
-            "Parser": "pyiohat/parsers/ident/msgfplus_parser.py",
-        }
+        "File Origin": "MSGFPlus",
+        "bigger_scores_better": False,
+        "validation_score_field": "ms-gf:spec_evalue",
+        "Parser": "pyiohat/parsers/ident/msgfplus_parser.py",
+    }
     obj.df["ms-gf:spec_evalue"] = [5, 2, 1, 3, 3]
     obj.df["search_engine"] = "msgfplus_2021_03_22"
     obj.add_ranks()
