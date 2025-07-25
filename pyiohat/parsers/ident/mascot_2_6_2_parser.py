@@ -86,7 +86,7 @@ class Mascot_2_6_2_Parser(IdentBaseParser):
         self.reference_dict["search_engine"] = "mascot_" + re.search(
             r"(?<=version=).*", self.section_data["header"]
         ).group().replace(".", "_")
-        self.reference_dict["mascot:score"] = pd
+        # self.reference_dict["mascot:score"] = pd
         self.metadata = {
             "File Origin": "Mascot",
             "bigger_scores_better": True,

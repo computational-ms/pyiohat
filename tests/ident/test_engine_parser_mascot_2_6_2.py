@@ -67,8 +67,8 @@ def test_engine_parsers_mascot_check_dataframe_integrity():
             "database": db_path,
             "enzyme": "(?<=[KR])(?![P])",
             "terminal_cleavage_site_integrity": "any",
-            "validation_score_field": {"mascot_2_6_2": "mascot:score"},
-            "bigger_scores_better": {"mascot_2_6_2": False},
+            # "validation_score_field": {"mascot_2_6_2": "mascot:score"},
+            # "bigger_scores_better": {"mascot_2_6_2": False},
             "modifications": [
                 {
                     "aa": "M",
@@ -91,6 +91,10 @@ def test_engine_parsers_mascot_check_dataframe_integrity():
             ],
         },
     )
+    parser.metadata = {
+        "validation_score_field": "mascot:score",
+        "bigger_scores_better": False,
+    }
     df = parser.unify()
 
     assert pytest.approx(df["ucalc_mz"].mean()) == 465.30768
