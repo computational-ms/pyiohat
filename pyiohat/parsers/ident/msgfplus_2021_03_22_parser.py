@@ -28,6 +28,12 @@ class MSGFPlus_2021_03_22_Parser(IdentBaseParser):
                 "header_translations"
             ]["translated_value"].items()
         }
+        self.metadata = {
+            "File Origin": "MSGFPlus",
+            "bigger_scores_better": False,
+            "validation_score_field": " ms-gf:spec_evalue",
+            "Parser": "pyiohat/parsers/ident/msgfplus_2021_03_22_parser.py",
+        }
 
     @classmethod
     def check_parser_compatibility(cls, file):

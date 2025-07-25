@@ -27,6 +27,12 @@ class XTandemAlanine_Parser(IdentBaseParser):
                 "header_translations"
             ]["translated_value"].items()
         }
+        self.metadata = {
+            "File Origin": "XtandemAlanine",
+            "bigger_scores_better": True,
+            "validation_score_field": " x!tandem:hyperscore",
+            "Parser": "pyiohat/parsers/ident/xtandem_alanine.py",
+        }
 
     @classmethod
     def check_parser_compatibility(cls, file):

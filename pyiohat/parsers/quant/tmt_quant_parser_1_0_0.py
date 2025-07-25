@@ -23,6 +23,10 @@ class TMTQuantParser(QuantBaseParser):
             ]["translated_value"].items()
         }
         self.df.rename(columns=self.mapping_dict, inplace=True)
+        self.metadata = {
+            "File Origin": "TMTQuant",
+            "Parser": "pyiohat/parsers/quant/tmt_quant_parser_1_0_0.py",
+        }
 
     @classmethod
     def check_parser_compatibility(cls, file):

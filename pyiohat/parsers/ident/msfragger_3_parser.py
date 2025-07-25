@@ -37,6 +37,12 @@ class MSFragger_3_Parser(IdentBaseParser):
         if not "modifications" in self.df.columns:
             self.df["modifications"] = ""
         self.reference_dict.update({k: None for k in self.mapping_dict.values()})
+        self.metadata = {
+            "File Origin": "MSFragger",
+            "bigger_scores_better": True,
+            "validation_score_field": "msfragger:hyperscore",
+            "Parser": "pyiohat/parsers/ident/msfragger_3_parser.py",
+        }
 
     @classmethod
     def check_parser_compatibility(cls, file):

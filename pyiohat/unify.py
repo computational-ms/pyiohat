@@ -40,6 +40,7 @@ class Unify:
         self._parser_classes = []
         self.parser = self._get_parser()
         self.df = None
+        self.run_metadata = None
 
     def _get_parser(self):
         """Check input file / parser compatibility and init matching parser in self.parser.
@@ -84,3 +85,14 @@ class Unify:
         self.df = self.parser.unify()
 
         return self.df
+
+    def get_metadata(self):
+        """Compute and returns a metadata form pyiohat run.
+
+        Returns:
+            self.metadata (dict): metadata dictionary
+
+        """
+        self.run_metadata = self.parser.metadata
+
+        return self.run_metadata

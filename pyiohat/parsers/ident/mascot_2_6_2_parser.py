@@ -86,7 +86,13 @@ class Mascot_2_6_2_Parser(IdentBaseParser):
         self.reference_dict["search_engine"] = "mascot_" + re.search(
             r"(?<=version=).*", self.section_data["header"]
         ).group().replace(".", "_")
-        self.reference_dict["mascot:score"] = pd.NA
+        self.reference_dict["mascot:score"] = pd.
+        self.metadata = {
+            "File Origin": "Mascot",
+            "bigger_scores_better": True,
+            "validation_score_field": " mascot:score",
+            "Parser": "pyiohat/parsers/ident/mascot_2_6_2_parser.py",
+        }
 
     @classmethod
     def check_parser_compatibility(cls, file):
