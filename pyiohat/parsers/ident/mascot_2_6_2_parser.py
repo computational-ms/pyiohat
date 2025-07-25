@@ -90,7 +90,7 @@ class Mascot_2_6_2_Parser(IdentBaseParser):
         self.metadata = {
             "File Origin": "Mascot",
             "bigger_scores_better": True,
-            "validation_score_field": " mascot:score",
+            "validation_score_field": "mascot:score",
             "Parser": "pyiohat/parsers/ident/mascot_2_6_2_parser.py",
         }
 

@@ -31,7 +31,7 @@ class MSGFPlus_2021_03_22_Parser(IdentBaseParser):
         self.metadata = {
             "File Origin": "MSGFPlus",
             "bigger_scores_better": False,
-            "validation_score_field": " ms-gf:spec_evalue",
+            "validation_score_field": "ms-gf:spec_evalue",
             "Parser": "pyiohat/parsers/ident/msgfplus_2021_03_22_parser.py",
         }
 

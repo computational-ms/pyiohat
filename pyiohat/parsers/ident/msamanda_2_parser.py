@@ -45,7 +45,7 @@ class MSAmanda_2_Parser(IdentBaseParser):
         self.metadata = {
             "File Origin": "MSAmanda",
             "bigger_scores_better": True,
-            "validation_score_field": " amanda:score",
+            "validation_score_field": "amanda:score",
             "Parser": "pyiohat/parsers/ident/msamanda_2_parser.py",
         }
 
