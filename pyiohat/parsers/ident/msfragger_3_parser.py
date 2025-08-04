@@ -39,6 +39,7 @@ class MSFragger_3_Parser(IdentBaseParser):
         self.reference_dict.update({k: None for k in self.mapping_dict.values()})
         self.metadata = {
             "File Origin": "MSFragger",
+            "Version": [3.0],
             "bigger_scores_better": True,
             "validation_score_field": "msfragger:hyperscore",
             "Parser": "pyiohat/parsers/ident/msfragger_3_parser.py",

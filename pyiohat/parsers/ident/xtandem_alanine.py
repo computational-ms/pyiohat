@@ -29,6 +29,7 @@ class XTandemAlanine_Parser(IdentBaseParser):
         }
         self.metadata = {
             "File Origin": "XtandemAlanine",
+            "Version": ["20.02.2020"],
             "bigger_scores_better": True,
             "validation_score_field": "x!tandem:hyperscore",
             "Parser": "pyiohat/parsers/ident/xtandem_alanine.py",

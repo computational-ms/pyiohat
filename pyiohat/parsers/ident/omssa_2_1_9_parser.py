@@ -40,6 +40,7 @@ class Omssa_Parser(IdentBaseParser):
         self.reference_dict.update({k: None for k in self.mapping_dict.values()})
         self.metadata = {
             "File Origin": "Omssa",
+            "Version": ["2.1.9"],
             "bigger_scores_better": False,
             "validation_score_field": "omssa:pvalue",
             "Parser": "pyiohat/parsers/ident/omssa_2_1_9_parser.py",

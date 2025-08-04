@@ -89,6 +89,7 @@ class Mascot_2_6_2_Parser(IdentBaseParser):
         # self.reference_dict["mascot:score"] = pd
         self.metadata = {
             "File Origin": "Mascot",
+            "Version": ["2.6.2"],
             "bigger_scores_better": True,
             "validation_score_field": "mascot:score",
             "Parser": "pyiohat/parsers/ident/mascot_2_6_2_parser.py",

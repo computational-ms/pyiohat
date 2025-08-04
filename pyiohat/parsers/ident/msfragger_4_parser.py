@@ -47,6 +47,7 @@ class MSFragger_4_Parser(IdentBaseParser):
         self.reference_dict.update({k: None for k in self.mapping_dict.values()})
         self.metadata = {
             "File Origin": "MSFragger",
+            "Version": [4.0, 4.1, 4.2, 4.3],
             "bigger_scores_better": True,
             "validation_score_field": "msfragger:hyperscore",
             "Parser": "pyiohat/parsers/ident/msfragger_4_parser.py",
