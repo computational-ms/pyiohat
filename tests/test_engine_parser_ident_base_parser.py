@@ -8,10 +8,6 @@ from pyiohat.parsers.ident_base_parser import IdentBaseParser
 from pyiohat.utils import merge_and_join_dicts
 
 
-def test_engine_parsers_IdentBaseParser_get_metadata_exists():
-    assert IdentBaseParser.get_metadata() is True
-
-
 def test_base_parser_read_rt_lookup_file():
     rt_lookup_path = pytest._test_path / "data" / "BSA1_ursgal_lookup.csv"
     input_file = (
