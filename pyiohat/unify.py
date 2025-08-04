@@ -67,7 +67,7 @@ class Unify:
 
         for parser in self._parser_classes:
             if parser.check_parser_compatibility(self.input_file) is True:
-                eg_parser = Cl(self.input_file)
+                eg_parser = parser()
                 self.run_metadata = eg_parser.metadata
                 return parser(
                     input_file=self.input_file,
