@@ -4,6 +4,10 @@ import pytest
 from pyiohat.parsers.quant_base_parser import QuantBaseParser
 
 
+def test_engine_parsers_QuantBaseParser_get_metadata_exists():
+    assert QuantBaseParser.get_metadata() is True
+
+
 def test_engine_parsers_QuantBaseParser_init():
     input_file = (
         pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_xtandem_alanine.xml"
