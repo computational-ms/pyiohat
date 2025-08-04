@@ -67,13 +67,9 @@ class Unify:
 
         for parser in self._parser_classes:
             if parser.check_parser_compatibility(self.input_file) is True:
-                eg_parser = parser()
+                valid_parser = parser(input_file=self.input_file, params=self.params, immutable_peptides=self.immutable_peptides,)
                 self.run_metadata = eg_parser.metadata
-                return parser(
-                    input_file=self.input_file,
-                    params=self.params,
-                    immutable_peptides=self.immutable_peptides,
-                )
+                return valid_parser
 
         raise IOError(f"No suitable parser found for {self.input_file}.")
 
