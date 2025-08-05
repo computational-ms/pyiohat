@@ -7,6 +7,11 @@ from pyiohat.parsers.ident.xtandem_alanine import (
 )
 
 
+def test_engine_parsers_xtandem_get_metadata():
+
+    assert XTandemAlanine_Parser.get_metadata() is True
+
+
 def test_engine_parsers_xtandem_init():
     input_file = (
         pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_xtandem_alanine.xml"
