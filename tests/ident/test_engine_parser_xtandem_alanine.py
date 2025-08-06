@@ -9,7 +9,7 @@ from pyiohat.parsers.ident.xtandem_alanine import (
 
 def test_engine_parsers_xtandem_get_metadata():
 
-    assert XTandemAlanine_Parser.metadata() is True
+    assert XTandemAlanine_Parser.metadata is True
 
 
 def test_engine_parsers_xtandem_init():
