@@ -181,7 +181,7 @@ def test_map_mod_translation_msfragger4():
 
 # Tests for n-term and digits
 def test_c_terminal_tmt():
-    input_file = pytest._test_path / "data" / "test_positions_msfragger.tsv"
+    input_file = pytest._test_path / "data" / "test_positions_msfragger4.tsv"
 
     parser = MSFragger_4_Parser(
         input_file,
@@ -189,8 +189,6 @@ def test_c_terminal_tmt():
             "cpus": 2,
             "enzyme": "(?<=[KR])(?![P])",
             "terminal_cleavage_site_integrity": "any",
-            "validation_score_field": {"MSFragger_4_0": "msfragger:hyperscore"},
-            "bigger_scores_better": {"MSFragger_4_0": True},
             "modifications": [
                 {
                     "aa": "M",
