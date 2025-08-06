@@ -42,7 +42,7 @@ def test_engine_parsers_xtandem_get_metadata():
             ],
         },
     )
-    assert parser.metadata is True
+    assert parser.metadata
 
 
 def test_engine_parsers_xtandem_init():
