@@ -12,7 +12,7 @@ def test_engine_parsers_xtandem_get_metadata():
         pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_xtandem_alanine.xml"
     )
     parser = XTandemAlanine_Parser(input_file)
-    assert XTandemAlanine_Parser.metadata is True
+    assert parser.metadata is True
 
 
 def test_engine_parsers_xtandem_init():
