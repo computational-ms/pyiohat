@@ -5,7 +5,7 @@ from pyiohat.parsers.ident.msfragger_4_parser import MSFragger_4_Parser
 
 def test_engine_parsers_msfragger_init():
     input_file = (
-        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_MSFragger_4.tsv"
+        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_msfragger_4.tsv"
     )
     parser = MSFragger_4_Parser(
         input_file,
@@ -41,7 +41,7 @@ def test_engine_parsers_msfragger_init():
 
 def test_engine_parsers_msfragger_metadata():
     input_file = (
-        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_MSFragger_4.tsv"
+        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_msfragger_4.tsv"
     )
     parser = MSFragger_4_Parser(
         input_file,
@@ -78,7 +78,7 @@ def test_engine_parsers_msfragger_metadata():
 
 def test_engine_parsers_msfragger_check_parser_compatibility():
     input_file = (
-        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_MSFragger_4.tsv"
+        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_msfragger_4.tsv"
     )
     assert MSFragger_4_Parser.check_parser_compatibility(input_file) is True
 
@@ -138,7 +138,7 @@ def test_engine_parsers_msfragger_check_dataframe_integrity():
 
 def test_map_mod_translation_msfragger4():
     input_file = (
-        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_MSFragger_4.tsv"
+        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_msfragger_4.tsv"
     )
 
     parser = MSFragger_4_Parser(
@@ -232,7 +232,7 @@ def test_c_terminal_tmt():
 
 
 def test_msfragger_open_search():
-    input_file = pytest._test_path / "data" / "BSA1_open_search.msfragger.tsv"
+    input_file = pytest._test_path / "data" / "BSA1_open_search.msfragger4.tsv"
     rt_lookup_path = pytest._test_path / "data" / "BSA1_ursgal_lookup.csv"
     db_path = pytest._test_path / "data" / "BSA.fasta"
 

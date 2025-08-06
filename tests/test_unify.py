@@ -304,6 +304,7 @@ def test_unify_get_mascot_parser():
     )
     assert isinstance(u.parser, Mascot_2_6_2_Parser)
 
+
 def test_unify_get_metadata():
     # Using msfragger as arbitrary parser, tests for presense of metadata attribute done on parser level
     rt_lookup_path = pytest._test_path / "data" / "_ursgal_lookup.csv"
