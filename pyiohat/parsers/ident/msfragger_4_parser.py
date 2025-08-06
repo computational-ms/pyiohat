@@ -26,7 +26,7 @@ class MSFragger_4_Parser(IdentBaseParser):
         if self.params.get("label", "") == "15N":
             raise NotImplementedError
 
-        self.df = pd.read_csv(self.input_file, delimiter="\t", usecols=range(29))
+        self.df = pd.read_csv(self.input_file, delimiter="\t")
         self.df.dropna(axis=1, how="all", inplace=True)
         # pprint(f"direct file read from msf out")
         # pprint(self.df)

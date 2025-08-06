@@ -84,7 +84,7 @@ def test_engine_parsers_msfragger_check_parser_compatibility():
 
 
 def test_engine_parsers_msfragger_check_dataframe_integrity():
-    input_file = pytest._test_path / "data" / "BSA1_MSFragger_4.tsv"
+    input_file = pytest._test_path / "data" / "BSA1_msfragger_4.tsv"
     rt_lookup_path = pytest._test_path / "data" / "BSA1_ursgal_lookup.csv"
     db_path = pytest._test_path / "data" / "BSA.fasta"
 
