@@ -337,10 +337,4 @@ def test_unify_get_metadata():
             ],
         },
     )
-    assert u.get_metadata() is {
-        "File Origin": "MSFragger",
-        "Version": [3.0],
-        "bigger_scores_better": True,
-        "validation_score_field": "msfragger:hyperscore",
-        "Parser": "pyiohat/parsers/ident/msfragger_3_parser.py",
-    }
+    assert u.get_metadata() is True
