@@ -40,6 +40,38 @@ def test_engine_parsers_mascot_init():
     )
 
 
+def test_engine_parsers_mascot_metadata():
+    input_file = pytest._test_path / "data" / "BSA1_mascot_2_6_2.dat"
+
+    parser = Mascot_2_6_2_Parser(
+        input_file,
+        params={
+            "cpus": 2,
+            "modifications": [
+                {
+                    "aa": "M",
+                    "type": "opt",
+                    "position": "any",
+                    "name": "Oxidation",
+                },
+                {
+                    "aa": "C",
+                    "type": "fix",
+                    "position": "any",
+                    "name": "Carbamidomethyl",
+                },
+                {
+                    "aa": "*",
+                    "type": "opt",
+                    "position": "Prot-N-term",
+                    "name": "Acetyl",
+                },
+            ],
+        },
+    )
+    assert parser.metadata
+
+
 def test_engine_parsers_mascot_check_parser_compatibility():
     msgf_parser_class = Mascot_2_6_2_Parser
     input_file = pytest._test_path / "data" / "BSA1_mascot_2_6_2.dat"
