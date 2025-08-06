@@ -136,7 +136,6 @@ class MSFragger_4_Parser(IdentBaseParser):
                                 "position"
                             ].to_list()
                         ]
-                        and pos == 1
                     ) and ((pos == None and "N-term" in mod) or pos == 1):
                         pos = 0
                     else:
