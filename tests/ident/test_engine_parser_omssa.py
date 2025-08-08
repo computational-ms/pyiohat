@@ -5,6 +5,48 @@ import pytest
 from pyiohat.parsers.ident.omssa_2_1_9_parser import Omssa_Parser
 
 
+def test_engine_parsers_omssa_metadata():
+    input_file = (
+        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_omssa_2_1_9.csv"
+    )
+
+    parser = Omssa_Parser(
+        input_file,
+        params={
+            "cpus": 2,
+            "enzyme": "(?<=[KR])(?![P])",
+            "terminal_cleavage_site_integrity": "any",
+            "validation_score_field": {"omssa_2_1_9": "omssa:pvalue"},
+            "bigger_scores_better": {"omssa_2_1_9": False},
+            "modifications": [
+                {
+                    "aa": "M",
+                    "type": "opt",
+                    "position": "any",
+                    "name": "Oxidation",
+                },
+                {
+                    "aa": "C",
+                    "type": "fix",
+                    "position": "any",
+                    "name": "Carbamidomethyl",
+                },
+                {
+                    "aa": "*",
+                    "type": "opt",
+                    "position": "Prot-N-term",
+                    "name": "Acetyl",
+                },
+            ],
+            "xml_file_list": [
+                pytest._test_path / "data" / "mods.xml",
+                pytest._test_path / "data" / "usermods.xml",
+            ],
+        },
+    )
+    assert parser.metadata
+
+
 def test_engine_parsers_omssa_init():
     input_file = (
         pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_omssa_2_1_9.csv"

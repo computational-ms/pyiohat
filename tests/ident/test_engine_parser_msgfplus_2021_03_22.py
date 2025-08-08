@@ -6,6 +6,41 @@ from pyiohat.parsers.ident.msgfplus_2021_03_22_parser import (
 )
 
 
+def test_engine_parsers_msgfplus_metadata():
+    input_file = pytest._test_path / "data" / "BSA1_msgfplus_2021_03_22.mzid"
+    parser = MSGFPlus_2021_03_22_Parser(
+        input_file,
+        params={
+            "cpus": 2,
+            "enzyme": "(?<=[KR])(?![P])",
+            "terminal_cleavage_site_integrity": "any",
+            "validation_score_field": {"msgfplus_2021_03_22": "ms-gf:spec_evalue"},
+            "bigger_scores_better": {"msgfplus_2021_03_22": False},
+            "modifications": [
+                {
+                    "aa": "M",
+                    "type": "opt",
+                    "position": "any",
+                    "name": "Oxidation",
+                },
+                {
+                    "aa": "C",
+                    "type": "fix",
+                    "position": "any",
+                    "name": "Carbamidomethyl",
+                },
+                {
+                    "aa": "*",
+                    "type": "opt",
+                    "position": "Prot-N-term",
+                    "name": "Acetyl",
+                },
+            ],
+        },
+    )
+    assert parser.metadata
+
+
 def test_engine_parsers_msgfplus_init():
     input_file = pytest._test_path / "data" / "BSA1_msgfplus_2021_03_22.mzid"
     parser = MSGFPlus_2021_03_22_Parser(

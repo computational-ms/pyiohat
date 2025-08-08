@@ -45,6 +45,10 @@ class FlashLFQ_1_2_0_Parser(QuantBaseParser):
         # }
         self.cc = ChemicalComposition()
         self.IUPAC_AAS = tuple("ACDEFGHIKLMNPQRSTUVWY")
+        self.metadata = {
+            "File Origin": "Flashlfq",
+            "Parser": "pyiohat/parsers/quant/flash_lfq_1_2_0_parser.py",
+        }
 
     @classmethod
     def check_parser_compatibility(cls, file):

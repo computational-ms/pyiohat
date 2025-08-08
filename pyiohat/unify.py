@@ -40,6 +40,7 @@ class Unify:
         self._parser_classes = []
         self.parser = self._get_parser()
         self.df = None
+        self.run_metadata = None
 
     def _get_parser(self):
         """Check input file / parser compatibility and init matching parser in self.parser.
@@ -66,11 +67,13 @@ class Unify:
 
         for parser in self._parser_classes:
             if parser.check_parser_compatibility(self.input_file) is True:
-                return parser(
+                valid_parser = parser(
                     input_file=self.input_file,
                     params=self.params,
                     immutable_peptides=self.immutable_peptides,
                 )
+                self.run_metadata = valid_parser.metadata
+                return valid_parser
 
         raise IOError(f"No suitable parser found for {self.input_file}.")
 
@@ -84,3 +87,12 @@ class Unify:
         self.df = self.parser.unify()
 
         return self.df
+
+    def get_metadata(self):
+        """Compute and returns a metadata form pyiohat run.
+
+        Returns:
+            self.metadata (dict): metadata dictionary
+
+        """
+        return self.parser.metadata

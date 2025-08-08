@@ -6,6 +6,38 @@ from pyiohat.parsers.ident.comet_2020_01_4_parser import (
 )
 
 
+def test_engine_parsers_comet_get_metadata():
+    input_file = pytest._test_path / "data" / "BSA1_comet_2020_01_4.mzid"
+
+    parser = Comet_2020_01_4_Parser(
+        input_file,
+        params={
+            "cpus": 2,
+            "modifications": [
+                {
+                    "aa": "M",
+                    "type": "opt",
+                    "position": "any",
+                    "name": "Oxidation",
+                },
+                {
+                    "aa": "C",
+                    "type": "fix",
+                    "position": "any",
+                    "name": "Carbamidomethyl",
+                },
+                {
+                    "aa": "*",
+                    "type": "opt",
+                    "position": "Prot-N-term",
+                    "name": "Acetyl",
+                },
+            ],
+        },
+    )
+    assert parser.metadata
+
+
 def test_engine_parsers_comet_init():
     input_file = pytest._test_path / "data" / "BSA1_comet_2020_01_4.mzid"
 

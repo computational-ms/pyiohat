@@ -37,6 +37,38 @@ def test_engine_parsers_flashLFQ_init():
     )
 
 
+def test_engine_parsers_flashLFQ_metadata():
+    input_file = pytest._test_path / "data" / "flash_lfq_1_2_0_quantified_peaks.tsv"
+    rt_lookup_path = pytest._test_path / "data" / "BSA2_ursgal_lookup.csv"
+    parser = FlashLFQ_1_2_0_Parser(
+        input_file,
+        params={
+            "rt_pickle_name": rt_lookup_path,
+            "modifications": [
+                {
+                    "aa": "M",
+                    "type": "opt",
+                    "position": "any",
+                    "name": "Oxidation",
+                },
+                {
+                    "aa": "C",
+                    "type": "fix",
+                    "position": "any",
+                    "name": "Carbamidomethyl",
+                },
+                {
+                    "aa": "*",
+                    "type": "opt",
+                    "position": "Prot-N-term",
+                    "name": "Acetyl",
+                },
+            ],
+        },
+    )
+    assert parser.metadata
+
+
 def test_engine_parsers_flashLFQ_check_parser_compatibility():
     input_file = pytest._test_path / "data" / "flash_lfq_1_2_0_quantified_peaks.tsv"
     assert FlashLFQ_1_2_0_Parser.check_parser_compatibility(input_file) is True

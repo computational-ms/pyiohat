@@ -303,3 +303,38 @@ def test_unify_get_mascot_parser():
         },
     )
     assert isinstance(u.parser, Mascot_2_6_2_Parser)
+
+
+def test_unify_get_metadata():
+    # Using msfragger as arbitrary parser, tests for presense of metadata attribute done on parser level
+    rt_lookup_path = pytest._test_path / "data" / "_ursgal_lookup.csv"
+    p = pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_msfragger_3.tsv"
+    db_path = pytest._test_path / "data" / "BSA.fasta"
+    u = Unify(
+        p,
+        {
+            "rt_pickle_name": rt_lookup_path,
+            "database": db_path,
+            "modifications": [
+                {
+                    "aa": "M",
+                    "type": "opt",
+                    "position": "any",
+                    "name": "Oxidation",
+                },
+                {
+                    "aa": "C",
+                    "type": "fix",
+                    "position": "any",
+                    "name": "Carbamidomethyl",
+                },
+                {
+                    "aa": "*",
+                    "type": "opt",
+                    "position": "Prot-N-term",
+                    "name": "Acetyl",
+                },
+            ],
+        },
+    )
+    assert u.get_metadata()

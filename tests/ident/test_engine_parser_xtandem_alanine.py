@@ -7,6 +7,44 @@ from pyiohat.parsers.ident.xtandem_alanine import (
 )
 
 
+def test_engine_parsers_xtandem_get_metadata():
+    input_file = (
+        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_xtandem_alanine.xml"
+    )
+
+    parser = XTandemAlanine_Parser(
+        input_file,
+        params={
+            "cpus": 2,
+            "enzyme": "(?<=[KR])(?![P])",
+            "terminal_cleavage_site_integrity": "any",
+            "validation_score_field": {"xtandem_alanine": "x!tandem:hyperscore"},
+            "bigger_scores_better": {"xtandem_alanine": True},
+            "modifications": [
+                {
+                    "aa": "M",
+                    "type": "opt",
+                    "position": "any",
+                    "name": "Oxidation",
+                },
+                {
+                    "aa": "C",
+                    "type": "fix",
+                    "position": "any",
+                    "name": "Carbamidomethyl",
+                },
+                {
+                    "aa": "*",
+                    "type": "opt",
+                    "position": "Prot-N-term",
+                    "name": "Acetyl",
+                },
+            ],
+        },
+    )
+    assert parser.metadata
+
+
 def test_engine_parsers_xtandem_init():
     input_file = (
         pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_xtandem_alanine.xml"

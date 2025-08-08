@@ -17,6 +17,18 @@ def test_engine_parsers_tmt_quant_init():
     )
 
 
+def test_engine_parsers_tmt_quant_metadata():
+    input_file = pytest._test_path / "data" / "mapping_data" / "trunc_tmt_quant.csv"
+    rt_lookup_path = pytest._test_path / "data" / "TMT16_ursgal_lookup.csv"
+    parser = TMTQuantParser(
+        input_file,
+        params={
+            "rt_pickle_name": rt_lookup_path,
+        },
+    )
+    assert parser.metadata
+
+
 def test_engine_parsers_tmt_quant_check_parser_compatibility():
     input_file = pytest._test_path / "data" / "mapping_data" / "trunc_tmt_quant.csv"
 

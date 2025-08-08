@@ -5,6 +5,42 @@ import pytest
 from pyiohat.parsers.ident.msamanda_2_parser import MSAmanda_2_Parser
 
 
+def test_engine_parsers_msamanda_metadata():
+    input_file = pytest._test_path / "data" / "BSA1_msamanda_2_0_0_17442.csv"
+
+    parser = MSAmanda_2_Parser(
+        input_file,
+        params={
+            "cpus": 2,
+            "enzyme": "(?<=[KR])(?![P])",
+            "terminal_cleavage_site_integrity": "any",
+            "validation_score_field": {"msamanda_2_0_0_17442": "amanda:score"},
+            "bigger_scores_better": {"msamanda_2_0_0_17442": True},
+            "modifications": [
+                {
+                    "aa": "M",
+                    "type": "opt",
+                    "position": "any",
+                    "name": "Oxidation",
+                },
+                {
+                    "aa": "C",
+                    "type": "fix",
+                    "position": "any",
+                    "name": "Carbamidomethyl",
+                },
+                {
+                    "aa": "*",
+                    "type": "opt",
+                    "position": "Prot-N-term",
+                    "name": "Acetyl",
+                },
+            ],
+        },
+    )
+    assert parser.metadata
+
+
 def test_engine_parsers_msamanda_init():
     input_file = pytest._test_path / "data" / "BSA1_msamanda_2_0_0_17442.csv"
 
@@ -38,6 +74,7 @@ def test_engine_parsers_msamanda_init():
             ],
         },
     )
+    assert parser.metadata
 
 
 def test_engine_parsers_msamanda_check_parser_compatibility():
