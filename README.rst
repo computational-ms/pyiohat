@@ -23,7 +23,7 @@ Currently supported
    - comet 2020 01 04
    - mascot 2.6.2
    - msamanda 2
-   - msfragger 3
+   - msfragger 3, 4
    - msgf+ 2021.03.22
    - omssa 2.1.9
    - x!tandem alanine
