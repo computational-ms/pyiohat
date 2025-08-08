@@ -40,6 +40,38 @@ def test_engine_parsers_mascot_init():
     )
 
 
+def test_engine_parsers_mascot_metadata():
+    input_file = pytest._test_path / "data" / "BSA1_mascot_2_6_2.dat"
+
+    parser = Mascot_2_6_2_Parser(
+        input_file,
+        params={
+            "cpus": 2,
+            "modifications": [
+                {
+                    "aa": "M",
+                    "type": "opt",
+                    "position": "any",
+                    "name": "Oxidation",
+                },
+                {
+                    "aa": "C",
+                    "type": "fix",
+                    "position": "any",
+                    "name": "Carbamidomethyl",
+                },
+                {
+                    "aa": "*",
+                    "type": "opt",
+                    "position": "Prot-N-term",
+                    "name": "Acetyl",
+                },
+            ],
+        },
+    )
+    assert parser.metadata
+
+
 def test_engine_parsers_mascot_check_parser_compatibility():
     msgf_parser_class = Mascot_2_6_2_Parser
     input_file = pytest._test_path / "data" / "BSA1_mascot_2_6_2.dat"
@@ -67,8 +99,8 @@ def test_engine_parsers_mascot_check_dataframe_integrity():
             "database": db_path,
             "enzyme": "(?<=[KR])(?![P])",
             "terminal_cleavage_site_integrity": "any",
-            "validation_score_field": {"mascot_2_6_2": "mascot:score"},
-            "bigger_scores_better": {"mascot_2_6_2": False},
+            # "validation_score_field": {"mascot_2_6_2": "mascot:score"},
+            # "bigger_scores_better": {"mascot_2_6_2": False},
             "modifications": [
                 {
                     "aa": "M",
@@ -91,6 +123,10 @@ def test_engine_parsers_mascot_check_dataframe_integrity():
             ],
         },
     )
+    parser.metadata = {
+        "validation_score_field": "mascot:score",
+        "bigger_scores_better": False,
+    }
     df = parser.unify()
 
     assert pytest.approx(df["ucalc_mz"].mean()) == 465.30768

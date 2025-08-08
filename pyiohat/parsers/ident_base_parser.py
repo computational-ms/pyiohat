@@ -334,8 +334,8 @@ class IdentBaseParser(BaseParser):
         Operations are performed inplace on self.df
         """
         eng_name = self.df["search_engine"].unique()[0]
-        score_col = self.params["validation_score_field"][eng_name]
-        top_is_highest = self.params["bigger_scores_better"][eng_name]
+        score_col = self.metadata["validation_score_field"]
+        top_is_highest = self.metadata["bigger_scores_better"]
         ranking_needs_to_be_ascending = False if top_is_highest is True else True
         self.df.loc[:, score_col] = self.df[score_col].astype(float)
         self.df.loc[:, "rank"] = (

@@ -31,6 +31,13 @@ class Comet_2020_01_4_Parser(IdentBaseParser):
                 "header_translations"
             ]["translated_value"].items()
         }
+        self.metadata = {
+            "File Origin": "Comet",
+            "Version": ["2020_01_4"],
+            "bigger_scores_better": False,
+            "validation_score_field": "comet:e_value",
+            "Parser": "pyiohat/parsers/ident/comet_2020_01_4_parser.py",
+        }
 
     @classmethod
     def check_parser_compatibility(cls, file):

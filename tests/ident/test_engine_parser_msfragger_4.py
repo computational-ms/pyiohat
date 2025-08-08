@@ -1,20 +1,56 @@
 import pytest
 
-from pyiohat.parsers.ident.msfragger_3_parser import MSFragger_3_Parser
+from pyiohat.parsers.ident.msfragger_4_parser import MSFragger_4_Parser
 
 
-def test_engine_parsers_msfragger_metadata():
+def test_engine_parsers_msfragger_init():
     input_file = (
-        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_msfragger_3.tsv"
+        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_msfragger_4.tsv"
     )
-    parser = MSFragger_3_Parser(
+    parser = MSFragger_4_Parser(
         input_file,
         params={
             "cpus": 2,
             "enzyme": "(?<=[KR])(?![P])",
             "terminal_cleavage_site_integrity": "any",
-            "validation_score_field": {"msfragger_3_0": "msfragger:hyperscore"},
-            "bigger_scores_better": {"msfragger_3_0": True},
+            "validation_score_field": {"MSFragger_4_0": "msfragger:hyperscore"},
+            "bigger_scores_better": {"MSFragger_4_0": True},
+            "modifications": [
+                {
+                    "aa": "M",
+                    "type": "opt",
+                    "position": "any",
+                    "name": "Oxidation",
+                },
+                {
+                    "aa": "C",
+                    "type": "fix",
+                    "position": "any",
+                    "name": "Carbamidomethyl",
+                },
+                {
+                    "aa": "*",
+                    "type": "opt",
+                    "position": "Prot-N-term",
+                    "name": "Acetyl",
+                },
+            ],
+        },
+    )
+
+
+def test_engine_parsers_msfragger_metadata():
+    input_file = (
+        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_msfragger_4.tsv"
+    )
+    parser = MSFragger_4_Parser(
+        input_file,
+        params={
+            "cpus": 2,
+            "enzyme": "(?<=[KR])(?![P])",
+            "terminal_cleavage_site_integrity": "any",
+            "validation_score_field": {"MSFragger_4_0": "msfragger:hyperscore"},
+            "bigger_scores_better": {"MSFragger_4_0": True},
             "modifications": [
                 {
                     "aa": "M",
@@ -40,55 +76,19 @@ def test_engine_parsers_msfragger_metadata():
     assert parser.metadata
 
 
-def test_engine_parsers_msfragger_init():
-    input_file = (
-        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_msfragger_3.tsv"
-    )
-    parser = MSFragger_3_Parser(
-        input_file,
-        params={
-            "cpus": 2,
-            "enzyme": "(?<=[KR])(?![P])",
-            "terminal_cleavage_site_integrity": "any",
-            "validation_score_field": {"msfragger_3_0": "msfragger:hyperscore"},
-            "bigger_scores_better": {"msfragger_3_0": True},
-            "modifications": [
-                {
-                    "aa": "M",
-                    "type": "opt",
-                    "position": "any",
-                    "name": "Oxidation",
-                },
-                {
-                    "aa": "C",
-                    "type": "fix",
-                    "position": "any",
-                    "name": "Carbamidomethyl",
-                },
-                {
-                    "aa": "*",
-                    "type": "opt",
-                    "position": "Prot-N-term",
-                    "name": "Acetyl",
-                },
-            ],
-        },
-    )
-
-
 def test_engine_parsers_msfragger_check_parser_compatibility():
     input_file = (
-        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_msfragger_3.tsv"
+        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_msfragger_4.tsv"
     )
-    assert MSFragger_3_Parser.check_parser_compatibility(input_file) is True
+    assert MSFragger_4_Parser.check_parser_compatibility(input_file) is True
 
 
 def test_engine_parsers_msfragger_check_dataframe_integrity():
-    input_file = pytest._test_path / "data" / "BSA1_msfragger_3.tsv"
+    input_file = pytest._test_path / "data" / "BSA1_msfragger_4.tsv"
     rt_lookup_path = pytest._test_path / "data" / "BSA1_ursgal_lookup.csv"
     db_path = pytest._test_path / "data" / "BSA.fasta"
 
-    parser = MSFragger_3_Parser(
+    parser = MSFragger_4_Parser(
         input_file,
         params={
             "cpus": 2,
@@ -96,8 +96,8 @@ def test_engine_parsers_msfragger_check_dataframe_integrity():
             "database": db_path,
             "enzyme": "(?<=[KR])(?![P])",
             "terminal_cleavage_site_integrity": "any",
-            "validation_score_field": {"msfragger_3_0": "msfragger:hyperscore"},
-            "bigger_scores_better": {"msfragger_3_0": True},
+            "validation_score_field": {"MSFragger_4_0": "msfragger:hyperscore"},
+            "bigger_scores_better": {"MSFragger_4_0": True},
             "modifications": [
                 {
                     "aa": "M",
@@ -136,19 +136,19 @@ def test_engine_parsers_msfragger_check_dataframe_integrity():
     assert (df["raw_data_location"] == "path/for/glory.mzML").all()
 
 
-def test_map_mod_translation_msfragger3():
+def test_map_mod_translation_msfragger4():
     input_file = (
-        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_msfragger_3.tsv"
+        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_msfragger_4.tsv"
     )
 
-    parser = MSFragger_3_Parser(
+    parser = MSFragger_4_Parser(
         input_file,
         params={
             "cpus": 2,
             "enzyme": "(?<=[KR])(?![P])",
             "terminal_cleavage_site_integrity": "any",
-            "validation_score_field": {"msfragger_3_0": "msfragger:hyperscore"},
-            "bigger_scores_better": {"msfragger_3_0": True},
+            "validation_score_field": {"MSFragger_4_0": "msfragger:hyperscore"},
+            "bigger_scores_better": {"MSFragger_4_0": True},
             "modifications": [
                 {
                     "aa": "M",
@@ -181,16 +181,14 @@ def test_map_mod_translation_msfragger3():
 
 # Tests for n-term and digits
 def test_c_terminal_tmt():
-    input_file = pytest._test_path / "data" / "test_positions_msfragger.tsv"
+    input_file = pytest._test_path / "data" / "test_positions_msfragger4.tsv"
 
-    parser = MSFragger_3_Parser(
+    parser = MSFragger_4_Parser(
         input_file,
         params={
             "cpus": 2,
             "enzyme": "(?<=[KR])(?![P])",
             "terminal_cleavage_site_integrity": "any",
-            "validation_score_field": {"msfragger_3_0": "msfragger:hyperscore"},
-            "bigger_scores_better": {"msfragger_3_0": True},
             "modifications": [
                 {
                     "aa": "M",
@@ -232,11 +230,11 @@ def test_c_terminal_tmt():
 
 
 def test_msfragger_open_search():
-    input_file = pytest._test_path / "data" / "BSA1_open_search.msfragger.tsv"
+    input_file = pytest._test_path / "data" / "BSA1_open_search.msfragger4.tsv"
     rt_lookup_path = pytest._test_path / "data" / "BSA1_ursgal_lookup.csv"
     db_path = pytest._test_path / "data" / "BSA.fasta"
 
-    parser = MSFragger_3_Parser(
+    parser = MSFragger_4_Parser(
         input_file,
         params={
             "cpus": 2,
@@ -244,8 +242,8 @@ def test_msfragger_open_search():
             "database": db_path,
             "enzyme": "(?<=[KR])(?![P])",
             "terminal_cleavage_site_integrity": "any",
-            "validation_score_field": {"msfragger_3_0": "msfragger:hyperscore"},
-            "bigger_scores_better": {"msfragger_3_0": True},
+            "validation_score_field": {"MSFragger_4_0": "msfragger:hyperscore"},
+            "bigger_scores_better": {"MSFragger_4_0": True},
             "modifications": [],
             "15N": False,
         },

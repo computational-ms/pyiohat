@@ -42,6 +42,13 @@ class MSAmanda_2_Parser(IdentBaseParser):
             errors="ignore",
         )
         self.reference_dict.update({k: None for k in self.mapping_dict.values()})
+        self.metadata = {
+            "File Origin": "MSAmanda",
+            "Version": ["2.0.0.17442"],
+            "bigger_scores_better": True,
+            "validation_score_field": "amanda:score",
+            "Parser": "pyiohat/parsers/ident/msamanda_2_parser.py",
+        }
 
     @classmethod
     def check_parser_compatibility(cls, file):
