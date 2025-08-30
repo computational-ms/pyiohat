@@ -212,38 +212,6 @@ class MSFragger_4_Parser(IdentBaseParser):
 
         return mods_translated.str.rstrip(";")
 
-    def _transform_mass_add_error(self, mass, pep_mass):
-        if self.params["precursor_mass_tolerance_unit"] == "ppm":
-            lower_mass = (
-                mass
-                - 2
-                * self.params["precursor_mass_tolerance_minus"]
-                * (mass + pep_mass)
-                / 1e6
-            )
-            upper_mass = (
-                mass
-                + 2
-                * self.params["precursor_mass_tolerance_plus"]
-                * (mass + pep_mass)
-                / 1e6
-            )
-        elif self.params["precursor_mass_tolerance_unit"] != "da":
-            lower_mass = (mass + pep_mass) - 2 * self.params[
-                "precursor_mass_tolerance_minus"
-            ]
-            upper_mass = (mass + pep_mass) + 2 * self.params[
-                "precursor_mass_tolerance_plus"
-            ]
-        else:
-            print(
-                "[ERROR] mass tolerance unit {0} not supported".format(
-                    self.params["precursor_mass_tolerance_unit"]
-                )
-            )
-            sys.exit(1)
-        return lower_mass, upper_mass
-
     def unify(self):
         """
         Primary method to read and unify engine output.
