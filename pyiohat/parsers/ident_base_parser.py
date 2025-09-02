@@ -139,7 +139,7 @@ class IdentBaseParser(BaseParser):
         new_columns = new_columns.dropna(axis=0, how="all")
         if len(new_columns) != len(self.df):
             logger.warning(
-                f"{len(self.df)-len(new_columns)} PSMs were dropped because their respective sequences could not be mapped."
+                f"{len(self.df) - len(new_columns)} PSMs were dropped because their respective sequences could not be mapped."
             )
         self.df = self.df.iloc[new_columns.index, :].reset_index(drop=True)
 
@@ -172,11 +172,7 @@ class IdentBaseParser(BaseParser):
             pren_seq.str.split(rf"{enzyme_pattern}").str[0].str.len() == 1
         ).groupby(pren_seq.index).agg(integrity_strictness) | (
             pren_seq.str[0] == "-"
-        ).groupby(
-            pren_seq.index
-        ).agg(
-            integrity_strictness
-        )
+        ).groupby(pren_seq.index).agg(integrity_strictness)
         postc_seq = (
             pd.concat(
                 [
@@ -192,11 +188,7 @@ class IdentBaseParser(BaseParser):
             postc_seq.str.split(rf"{enzyme_pattern}").str[0].str.len() == 1
         ).groupby(postc_seq.index).agg(integrity_strictness) | (
             postc_seq.str[-1] == "-"
-        ).groupby(
-            postc_seq.index
-        ).agg(
-            integrity_strictness
-        )
+        ).groupby(postc_seq.index).agg(integrity_strictness)
 
         internal_cuts = self.df["sequence"].str.split(rf"{enzyme_pattern}")
         self.df.loc[:, "missed_cleavages"] = (

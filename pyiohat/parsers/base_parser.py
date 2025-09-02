@@ -6,7 +6,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import uparma
 from chemical_composition import ChemicalComposition
 from loguru import logger
 from unimod_mapper.unimod_mapper import UnimodMapper
@@ -29,7 +28,6 @@ class BaseParser:
             params = {}
         self.params = params
         self.xml_file_list = self.params.get("xml_file_list", None)
-        self.param_mapper = uparma.UParma()
         self.mod_mapper = UnimodMapper(xml_file_list=self.xml_file_list)
         self.params["mapped_mods"] = self.mod_mapper.map_mods(
             mod_list=self.params.get("modifications", [])

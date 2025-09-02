@@ -28,9 +28,7 @@ class QuantBaseParser(BaseParser):
             self.df["reported_mz"] != "-", "theoretical_mz"
         ].astype(float) - self.df.loc[
             self.df["reported_mz"] != "-", "reported_mz"
-        ].astype(
-            float
-        )
+        ].astype(float)
         accuracy_ppm = (
             (accuracy_mz)
             / self.df.loc[self.df["reported_mz"] != "-", "reported_mz"].astype(float)
