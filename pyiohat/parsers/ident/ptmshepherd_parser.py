@@ -48,32 +48,36 @@ class PTMShepherd_Parser(IdentBaseParser):
         self.reference_dict.update({k: None for k in self.mapping_dict.values()})
         self.metadata = self._get_metadata()
 
-
     def _get_metadata(self):
-        
+
         metadata = {
             "File Origin": "PTMShepherd",
-            "Version": [2.0.5],
+            "Version": ["2.0.5"],
             "Parser": "pyiohat/parsers/ident/ptmshepherd_parser.py",
         }
 
         if not "search_engine" in self.df.columns:
             # This means the parser is running directly after search + ptmshepherd without pyiohat inbetween
             # search engine must have been msfragger, write bigger_score_better and validation_score_field accordinglly
-            metadata.append("validation_score_field": "msfragger:hyperscore", "bigger_scores_better": True)
+            metadata.append(
+                {
+                    "validation_score_field": "msfragger:hyperscore",
+                    "bigger_scores_better": True,
+                }
+            )
 
         else:
             # This means the parser is running after search + pyiohat + ptmshepherd
             # In this case bigger_score_better and validation_score_field needs to be retrived from the parser of the relavent search engine
             parsers_dict = {
-                "xtandem_":"xtandem_alanine",
-                "omssa_2_1_9":"omssa_2_1_9_parser",
-                "msgfplus_":"msgfplus_2021_03_22_parser",
+                "xtandem_": "xtandem_alanine",
+                "omssa_2_1_9": "omssa_2_1_9_parser",
+                "msgfplus_": "msgfplus_2021_03_22_parser",
                 "msfragger_4_2": "msfragger_4_parser",
-                "msfragger_3_0":"msfragger_3_parser",
-                "msamanda_2_0_0_17442":"msamanda_2_parser",
-                "mascot_":"mascot_2_6_2_parser",
-                "comet_":"comet_2020_01_4_parser",
+                "msfragger_3_0": "msfragger_3_parser",
+                "msamanda_2_0_0_17442": "msamanda_2_parser",
+                "mascot_": "mascot_2_6_2_parser",
+                "comet_": "comet_2020_01_4_parser",
             }
             search_engine = self.df["search_engine"][1]
             for k, v in parsers_dict.items():
@@ -84,7 +88,11 @@ class PTMShepherd_Parser(IdentBaseParser):
             parser_classes = []
             for cat in BaseParser.__subclasses__():
                 parser_classes.extend(
-                    [c for c in cat.__subclasses__() if c.__module__ == original_parser_module]
+                    [
+                        c
+                        for c in cat.__subclasses__()
+                        if c.__module__ == original_parser_module
+                    ]
                 )
             ParserClass = parser_classes[0]
             parser_instance = ParserClass(
@@ -92,14 +100,20 @@ class PTMShepherd_Parser(IdentBaseParser):
                 params=self.params,
                 immutable_peptides=self.immutable_peptides,
             )
-            
+
             original_metadata = parser_instance.metadata
 
-            metadata.append("validation_score_field": original_metadata["validation_score_field"], "bigger_scores_better": original_metadata["bigger_scores_better"])
+            metadata.append(
+                {
+                    "validation_score_field": original_metadata[
+                        "validation_score_field"
+                    ],
+                    "bigger_scores_better": original_metadata["bigger_scores_better"],
+                }
+            )
 
         return metadata
 
- 
     @classmethod
     def check_parser_compatibility(cls, file):
         """Assert compatibility between file and parser.
@@ -133,11 +147,10 @@ class PTMShepherd_Parser(IdentBaseParser):
             "Delta Mass",
             "MSFragger Localization",
             "Modified Peptide",
-            "Observed Modifications",            
+            "Observed Modifications",
         }
         columns_match = len(ref_columns.difference(head)) == 0
         return is_tsv and columns_match
-
 
     def translate_mods(self):
         """
@@ -204,7 +217,6 @@ class PTMShepherd_Parser(IdentBaseParser):
 
         return mods_translated.str.rstrip(";")
 
-    
     def translate_glycans(self):
         """
         Transforms the 'glycan_composition' column based on:
@@ -219,13 +231,9 @@ class PTMShepherd_Parser(IdentBaseParser):
         monosaccharide_dict = params.get("monosaccharide_dict", {"Fuc": "dHex"})
         s = self.df["glycan_composition"].astype(str)
         # Map the No Glycan Matched case to a blank string
-        result = s.mask(
-            lambda x: x == "No Glycan Matched",
-            other=""
-        )
+        result = s.mask(lambda x: x == "No Glycan Matched", other="")
         # Remove everything after the first space eg. " % 1702.5814"
         result = result.str.split(" ").str[0]
-
 
         def repl(match):
             name = match.group(1)  # e.g. "HexNAc"
@@ -234,11 +242,10 @@ class PTMShepherd_Parser(IdentBaseParser):
             return f"{mapped}({count})"
 
         # Find monomer(amount) pattern and map monomer into generic monomer names
-        pattern = re.compile(r'([A-Za-z0-9]+)\((\d+)\)')
+        pattern = re.compile(r"([A-Za-z0-9]+)\((\d+)\)")
         mapped_col = s.apply(lambda raw: pattern.sub(repl, raw))
 
         return mapped_col
-
 
     def peptide_is_decoy(self):
         """
@@ -253,14 +260,21 @@ class PTMShepherd_Parser(IdentBaseParser):
 
         if "proteins" in df.columns:
             # Vectorized substring search; treat NaNs as False
-            result = df["proteins"].astype(str).str.contains(substring, case=False, na=False)
+            result = (
+                df["proteins"].astype(str).str.contains(substring, case=False, na=False)
+            )
         elif "protein_id" in df.columns:
-            result = df["protein_id"].astype(str).str.contains(substring, case=False, na=False)
+            result = (
+                df["protein_id"]
+                .astype(str)
+                .str.contains(substring, case=False, na=False)
+            )
         else:
-            raise KeyError("Neither 'proteins' nor 'protein_id' column found in DataFrame.")
-        
-        return result
+            raise KeyError(
+                "Neither 'proteins' nor 'protein_id' column found in DataFrame."
+            )
 
+        return result
 
     def glycan_is_decoy(self):
         """
@@ -274,7 +288,7 @@ class PTMShepherd_Parser(IdentBaseParser):
         is_decoy = col.str.startswith(prefix)
         # Clean glycan_composition by removing "Decoy_" prefix
         self.df["glycan_composition"] = col.str.removeprefix(prefix)
-        
+
         return is_decoy
 
     def unify(self):
