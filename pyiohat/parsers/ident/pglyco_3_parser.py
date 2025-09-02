@@ -146,6 +146,11 @@ class PGlyco_3_Parser(IdentBaseParser):
         Converts the oGlyco formatted glycan compositions into unified glycan
         compositions
         """
+        return_df = self.df["glycan_composition"].apply(self.transform_glycan_entry)
+        return return_df
+
+    def transform_glycan_entry(self, entry):
+        # Find all patterns of <single_letter>(<integer>)
         pglyco_glyco_lookup = {
             "H": "Hex",
             "N": "HexNAc",
@@ -153,11 +158,6 @@ class PGlyco_3_Parser(IdentBaseParser):
             "A": "NulNAcA",
             "G": "NulNGcA",
         }
-        return_df = self.df["glycan_composition"].apply(self.transform_glycan_entry)
-        return return_df
-
-    def transform_glycan_entry(self, entry):
-        # Find all patterns of <single_letter>(<integer>)
         matches = re.findall(r"([A-Z])\((\d+)\)", entry)
 
         if not matches:
@@ -181,7 +181,7 @@ class PGlyco_3_Parser(IdentBaseParser):
         """
 
         # Apply the transformation function to the 'modification' column
-        return self.df["modifications"].apply(transform_mod_entry)
+        return self.df["modifications"].apply(self.transform_mod_entry)
 
     def transform_mod_entry(self, entry):
         if pd.isna(entry) or not entry:

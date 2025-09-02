@@ -115,37 +115,13 @@ def test_engine_parsers_pglyco_check_dataframe_integrity():
         },
     )
     df = parser.unify()
-    assert len(df) == 3417
-    assert pytest.approx(df["ucalc_mz"].mean()) == 477.8585
-    assert pytest.approx(df["exp_mz"].mean()) == 478.12137
+    assert len(df) == 9
+    assert pytest.approx(df["ucalc_mz"].mean()) == 226.733215
+    assert pytest.approx(df["exp_mz"].mean()) == 869.482910
 
-    assert df["modifications"].str.contains("Acetyl:0").sum() == 2
-    assert df["modifications"].str.contains("Oxidation:").sum() == 221
-    assert (
-        df["modifications"].str.count("Carbamidomethyl:")
-        == df["sequence"].str.count("C")
-    ).all()
-    assert df["modifications"].str.count(":").sum() == 2242
-    assert (df["raw_data_location"] == "path/for/glory.mzML").all()
-
-
-# def test_pglyco_convert_glycan_composition():
-#     input_file = pytest._test_path / "data" / "BSA1_open_search.msfragger4.tsv"
-#     rt_lookup_path = pytest._test_path / "data" / "BSA1_ursgal_lookup.csv"
-#     db_path = pytest._test_path / "data" / "BSA.fasta"
-
-#     parser = PGlyco_3_Parser(
-#         input_file,
-#         params={
-#             "cpus": 2,
-#             "rt_pickle_name": rt_lookup_path,
-#             "database": db_path,
-#             "enzyme": "(?<=[KR])(?![P])",
-#             "terminal_cleavage_site_integrity": "any",
-#             # "validation_score_field": {"MSFragger_4_0": "msfragger:hyperscore"},
-#             # "bigger_scores_better": {"MSFragger_4_0": True},
-#             "modifications": [],
-#         },
-#     )
-#     df = parser.unify()
-#     assert df["glycan_composition"].str.contains("Acetyl:0").sum() == 2
+    assert df["modifications"].str.contains("Carbamidomethyl:1").sum() == 1
+    assert (df["glycan_is_decoy"] == True).sum() == 4
+    assert (df["peptide_is_decoy"] == True).sum() == 1
+    assert (df["is_decoy"] == True).sum() == 5
+    assert df["glycan_composition"].str.contains("NulNAcA").sum() == 8
+    assert df["glycan_composition"].str.contains("dHex").sum() == 1
