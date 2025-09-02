@@ -23,9 +23,6 @@ class PTMShepherd_Parser(IdentBaseParser):
         """
         super().__init__(*args, **kwargs)
         self.style = "ptmshepherd_style_1"
-        # 15N handling missing for now
-        if self.params.get("label", "") == "15N":
-            raise NotImplementedError
 
         self.df = pd.read_csv(self.input_file, delimiter="\t")
         self.df.dropna(axis=1, how="all", inplace=True)
@@ -39,15 +36,15 @@ class PTMShepherd_Parser(IdentBaseParser):
             "Protein ID": "protein_id",
             "Observed M/Z": "exp_mz",
             "Observed Mass": "exp_mass",
-            "Calculated M/Z": "ucalc_mz",
-            "Calculated Peptide Mass": "ucalc_mass",
             "Delta Mass": "mass_delta",
-            "MSFragger Localization": "Localization",
+            "Total Glycan Composition": "glycan_composition",
+            "Glycan Score": "ptm_shepherd:Glycan Score",
+            "Glycan q-value": "ptm_shepherd:Glycan q-value",
+            "peptide_is_decoy": "peptide_is_decoy",
+            "glycan_is_decoy": "glycan_is_decoy",
         }
         self.df.rename(columns=self.mapping_dict, inplace=True)
         self.df.columns = self.df.columns.str.lstrip(" ")
-        if not "modifications" in self.df.columns:
-            self.df["modifications"] = ""
         self.reference_dict.update({k: None for k in self.mapping_dict.values()})
         self.metadata = self._get_metadata()
 
@@ -63,20 +60,20 @@ class PTMShepherd_Parser(IdentBaseParser):
         if not "search_engine" in self.df.columns:
             # This means the parser is running directly after search + ptmshepherd without pyiohat inbetween
             # search engine must have been msfragger, write bigger_score_better and validation_score_field accordinglly
-            metadata.append("validation_score_field": "ptmshepherd:hyperscore", "bigger_scores_better": True)
+            metadata.append("validation_score_field": "msfragger:hyperscore", "bigger_scores_better": True)
 
         else:
             # This means the parser is running after search + pyiohat + ptmshepherd
             # In this case bigger_score_better and validation_score_field needs to be retrived from the parser of the relavent search engine
             parsers_dict = {
-            "xtandem_":"xtandem_alanine",
-            "omssa_2_1_9":"omssa_2_1_9_parser",
-            "msgfplus_":"msgfplus_2021_03_22_parser",
-            "msfragger_4_2": "msfragger_4_parser",
-            "msfragger_3_0":"msfragger_3_parser",
-            "msamanda_2_0_0_17442":"msamanda_2_parser",
-            "mascot_":"mascot_2_6_2_parser",
-            "comet_":"comet_2020_01_4_parser",
+                "xtandem_":"xtandem_alanine",
+                "omssa_2_1_9":"omssa_2_1_9_parser",
+                "msgfplus_":"msgfplus_2021_03_22_parser",
+                "msfragger_4_2": "msfragger_4_parser",
+                "msfragger_3_0":"msfragger_3_parser",
+                "msamanda_2_0_0_17442":"msamanda_2_parser",
+                "mascot_":"mascot_2_6_2_parser",
+                "comet_":"comet_2020_01_4_parser",
             }
             search_engine = self.df["search_engine"][1]
             for k, v in parsers_dict.items():
@@ -141,6 +138,145 @@ class PTMShepherd_Parser(IdentBaseParser):
         columns_match = len(ref_columns.difference(head)) == 0
         return is_tsv and columns_match
 
+
+    def translate_mods(self):
+        """
+        Replace internal modification nomenclature with formatted modification strings.
+
+        Returns:
+            (pd.Series): column with formatted mod strings
+        """
+        self.df["modifications"] = self.df["modifications"].astype(str)
+        # print(self.df["modifications"])
+        mod_split_col = self.df["modifications"].fillna("").str.split(", ")
+        unique_mods = set().union(*mod_split_col.apply(set)).difference({""})
+        unique_mod_masses = {
+            match.group(1)
+            for m in unique_mods
+            if (match := re.search(r"\(([^)]+)\)", m))
+        }
+        # Map single mods
+        potential_names = {
+            m: [name for name in self.mod_mapper.mass_to_names(float(m), decimals=4)]
+            for m in unique_mod_masses
+        }
+        # Map multiple mods
+        for n in [2, 3]:
+            for unmapped_mass in {k: v for k, v in potential_names.items() if v == []}:
+                potential_mods = [
+                    name[1]
+                    for name in self.mod_mapper.mass_to_combos(
+                        float(unmapped_mass), n=n, decimals=4
+                    )
+                ]
+                if len(potential_mods) == 1:
+                    potential_names[unmapped_mass] = potential_mods[0]
+        non_mappable_mods = {
+            k: len(
+                [
+                    m
+                    for m in list(
+                        itertools.chain.from_iterable(
+                            mod_split_col.apply(list).to_list()
+                        )
+                    )
+                    if k in m
+                ]
+            )
+            for k, v in potential_names.items()
+            if v == []
+        }
+        non_mappable_percent = pd.Series(
+            [v / len(self.df) for v in non_mappable_mods.values()], dtype="float64"
+        )
+        if any(non_mappable_percent > 0.001):
+            raise ValueError(
+                "Some modifications found in more than 0.1% of PSMs cannot be mapped."
+            )
+        if len(non_mappable_percent) > 0:
+            logger.warning(
+                "Some modifications found in less than 0.1% of PSMs cannot be mapped and were removed."
+            )
+        # pprint(f"Potential names for modifications reported: {potential_names}")
+        mods_translated = mod_split_col.apply(
+            self._map_mod_translation, map_dict=potential_names
+        )
+
+        return mods_translated.str.rstrip(";")
+
+    
+    def translate_glycans(self):
+        """
+        Transforms the 'glycan_composition' column based on:
+          - Replacing "No Glycan Assigned" with empty string
+          - Removing 'Decoy_' prefix if present
+          - Stripping content after the first space
+          - Mapping each character in the remaining string via monosaccharide_dict
+
+        Returns:
+            pandas.Series: processed values aligned to self.df index
+        """
+        monosaccharide_dict = params.get("monosaccharide_dict", {"Fuc": "dHex"})
+        s = self.df["glycan_composition"].astype(str)
+        # Map the No Glycan Matched case to a blank string
+        result = s.mask(
+            lambda x: x == "No Glycan Matched",
+            other=""
+        )
+        # Remove everything after the first space eg. " % 1702.5814"
+        result = result.str.split(" ").str[0]
+
+
+        def repl(match):
+            name = match.group(1)  # e.g. "HexNAc"
+            count = match.group(2)  # e.g. "2"
+            mapped = monosaccharide_dict.get(name, name)
+            return f"{mapped}({count})"
+
+        # Find monomer(amount) pattern and map monomer into generic monomer names
+        pattern = re.compile(r'([A-Za-z0-9]+)\((\d+)\)')
+        mapped_col = s.apply(lambda raw: pattern.sub(repl, raw))
+
+        return mapped_col
+
+
+    def peptide_is_decoy(self):
+        """
+        Returns a boolean Series indicating whether each row should be flagged as a decoy peptide.
+        Logic:
+          - If 'proteins' exists: check if it contains 'decoy_' anywhere.
+          - Else if 'protein_id' exists: check that column instead.
+          - Raises KeyError if neither column exists.
+        """
+        df = self.df
+        substring = "decoy_"
+
+        if "proteins" in df.columns:
+            # Vectorized substring search; treat NaNs as False
+            result = df["proteins"].astype(str).str.contains(substring, case=False, na=False)
+        elif "protein_id" in df.columns:
+            result = df["protein_id"].astype(str).str.contains(substring, case=False, na=False)
+        else:
+            raise KeyError("Neither 'proteins' nor 'protein_id' column found in DataFrame.")
+        
+        return result
+
+
+    def glycan_is_decoy(self):
+        """
+        Returns a boolean Series indicating which rows in 'glycan_composition'
+        start with the prefix 'Decoy_'.
+        It also cleans the DataFrame in place by stripping that prefix where present.
+        """
+        prefix = "Decoy_"
+        col = self.df["glycan_composition"]
+        # Calcualte glycan_is_decoy values
+        is_decoy = col.str.startswith(prefix)
+        # Clean glycan_composition by removing "Decoy_" prefix
+        self.df["glycan_composition"] = col.str.removeprefix(prefix)
+        
+        return is_decoy
+
     def unify(self):
         """
         Primary method to read and unify engine output.
@@ -148,7 +284,12 @@ class PTMShepherd_Parser(IdentBaseParser):
         Returns:
             self.df (pd.DataFrame): unified dataframe
         """
-        self.df["glycan_annotation_engine"] = "ptmshepherd"
+        self.df["validation_engine"] = "ptmshepherd"
+        self.df["modifications"] = self.translate_mods()
+        self.df["glycan_composition"] = self.translate_glycans()
+        self.df["peptide_is_decoy"] = self.peptide_is_decoy()
+        self.df["glycan_is_decoy"] = self.glycan_is_decoy()
+
         self.process_unify_style()
 
         return self.df
