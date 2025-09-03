@@ -37,7 +37,7 @@ class IdentBaseParser(BaseParser):
         super().__init__(*args, **kwargs)
         self.DELIMITER = self.params.get("delimiter", "<|>")
         self.PROTON = PROTON
-        self.IUPAC_AAS = tuple("ACDEFGHIKLMNPQRSTUVWY")
+        self.IUPAC_AAS = tuple("ACDEFGHIJKLMNPQRSTUVWY")
         self.df = None
 
         self.non_mappable_mods = set(
@@ -142,6 +142,8 @@ class IdentBaseParser(BaseParser):
                 f"{len(self.df)-len(new_columns)} PSMs were dropped because their respective sequences could not be mapped."
             )
         self.df = self.df.iloc[new_columns.index, :].reset_index(drop=True)
+        if self.style and self.style in ("pglyco_db_style_1"):
+            self.df["sequence"] = self.df["sequence"].astype(str).str.replace("J", "N")
 
     def check_enzyme_specificity(self):
         """Check consistency of N/C-terminal cleavage sites.
@@ -211,6 +213,7 @@ class IdentBaseParser(BaseParser):
         Offsets are calculated between theoretical and experimental mass-to-charge ratio.
         Operations are performed inplace on self.df
         """
+        self.IUPAC_AAS = tuple("ACDEFGHIKLMNPQRSTUVWY")
         all_compositions = {}
         for aa in self.IUPAC_AAS:
             self.cc.use(sequence=aa)
@@ -353,6 +356,9 @@ class IdentBaseParser(BaseParser):
         """
         decoy_tag = self.params.get("decoy_tag", "decoy_")
         self.df.loc[:, "is_decoy"] = self.df["protein_id"].str.contains(decoy_tag)
+        if "glycan_is_decoy" in self.df.columns:
+            mask = self.df["glycan_is_decoy"] | self.df["peptide_is_decoy"]
+            self.df.loc[mask, "is_decoy"] = True
         if self.immutable_peptides is not None:
             auto = ahocorasick.Automaton()
             for seq in self.immutable_peptides:
