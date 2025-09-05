@@ -21,10 +21,17 @@ class MSAmanda_2_Parser(IdentBaseParser):
         self.df.dropna(axis=1, how="all", inplace=True)
 
         self.mapping_dict = {
-            v: k
-            for k, v in self.param_mapper.get_default_params(style=self.style)[
-                "header_translations"
-            ]["translated_value"].items()
+            "Nr of matched peaks": "amanda:num_matched_peaks",
+            "Amanda Score": "amanda:score",
+            "Weighted Probability": "amanda:weighted_probability",
+            "Charge": "charge",
+            "m/z": "exp_mz",
+            "Modifications": "modifications",
+            "Rank": "rank",
+            "RT": "retention_time_seconds",
+            "Sequence": "sequence",
+            "Scan Number": "spectrum_id",
+            "Title": "spectrum_title",
         }
         self.df.rename(columns=self.mapping_dict, inplace=True)
         self.df.columns = self.df.columns.str.lstrip(" ")

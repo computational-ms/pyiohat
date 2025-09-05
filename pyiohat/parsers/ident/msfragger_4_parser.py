@@ -31,10 +31,31 @@ class MSFragger_4_Parser(IdentBaseParser):
         # pprint(f"direct file read from msf out")
         # pprint(self.df)
         self.mapping_dict = {
-            v: k
-            for k, v in self.param_mapper.get_default_params(style=self.style)[
-                "header_translations"
-            ]["translated_value"].items()
+            "annotated_delta_mass": "annotated_delta_mass",
+            "charge": "charge",
+            "massdiff": "mass_difference",
+            "modification_info": "modifications",
+            "best_locs": "msfragger:best_locs",
+            "best_score_with_delta_mass": "msfragger:best_score_with_delta_mass",
+            "delta_score": "msfragger:delta_score",
+            "expectscore": "msfragger:expect_score",
+            "hyperscore": "msfragger:hyperscore",
+            "num_matched_ions": "msfragger:matched_fragment_ions",
+            "calc_neutral_pep_mass": "msfragger:neutral_mass_of_peptide",
+            "nextscore": "msfragger:next_score",
+            "num_missed_cleavages": "msfragger:number_of_missed_cleavages",
+            "num_tol_term": "msfragger:number_of_tryptic_termini",
+            "precursor_neutral_mass": "msfragger:precursor_neutral_mass_da",
+            "score_without_delta_mass": "msfragger:score_without_delta_mass",
+            "second_best_score_with_delta_mass": "msfragger:second_best_score_with_delta_mass",
+            "tot_num_ions": "msfragger:total_possible_number_of_matched_theoretical_fragment_ions",
+            "protein": "protein_id",
+            "hit_rank": "rank",
+            "retention_time": "retention_time_seconds",
+            "peptide": "sequence",
+            "peptide_next_aa": "sequence_post_aa",
+            "peptide_prev_aa": "sequence_pre_aa",
+            "scannum": "spectrum_id",
         }
         # pprint(f"mapping dict")
         # pprint(self.mapping_dict)

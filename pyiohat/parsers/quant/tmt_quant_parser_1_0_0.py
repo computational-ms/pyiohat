@@ -17,10 +17,15 @@ class TMTQuantParser(QuantBaseParser):
         self.df = pd.read_csv(self.input_file)
 
         self.mapping_dict = {
-            v: k
-            for k, v in self.param_mapper.get_default_params(style=self.style)[
-                "header_translations"
-            ]["translated_value"].items()
+            "accuracy": "accuracy_mz",
+            "filename": "raw_data_location",
+            "mz": "reported_mz",
+            "iso_mz": "theoretical_mz",
+            "isolabel_id": "tmt_quant:isolabel_id",
+            "original_quant_value": "tmt_quant:original_quant_value",
+            "raw_quant_area": "tmt_quant:raw_quant_area",
+            "raw_quant_intensity": "tmt_quant:raw_quant_intensity",
+            "s2i": "tmt_quant:s2i",
         }
         self.df.rename(columns=self.mapping_dict, inplace=True)
         self.metadata = {

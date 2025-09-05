@@ -26,10 +26,16 @@ class Comet_2020_01_4_Parser(IdentBaseParser):
         self.spec_records = None
         self.style = "comet_style_1"
         self.mapping_dict = {
-            v: k
-            for k, v in self.param_mapper.get_default_params(style=self.style)[
-                "header_translations"
-            ]["translated_value"].items()
+            "calculatedMassToCharge": "calc_mz",
+            "chargeState": "charge",
+            "Comet:deltacn": "comet:deltacn",
+            "Comet:expectation value": "comet:e_value",
+            "number of matched peaks": "comet:num_matched_ions",
+            "number of unmatched peaks": "comet:num_unmatched_ions",
+            "Comet:spscore": "comet:score",
+            "Comet:xcorr": "comet:xcorr",
+            "experimentalMassToCharge": "exp_mz",
+            "peptide_ref": "sequence",
         }
         self.metadata = {
             "File Origin": "Comet",

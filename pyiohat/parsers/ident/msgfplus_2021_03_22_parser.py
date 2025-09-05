@@ -23,10 +23,18 @@ class MSGFPlus_2021_03_22_Parser(IdentBaseParser):
         self.spec_records = None
         self.style = "msgfplus_style_1"
         self.mapping_dict = {
-            v: k
-            for k, v in self.param_mapper.get_default_params(style=self.style)[
-                "header_translations"
-            ]["translated_value"].items()
+            "calculatedMassToCharge": "calc_mz",
+            "chargeState": "charge",
+            "experimentalMassToCharge": "exp_mz",
+            "MS-GF:DeNovoScore": "ms-gf:denovoscore",
+            "MS-GF:EValue": "ms-gf:evalue",
+            "NumMatchedMainIons": "ms-gf:num_matched_ions",
+            "MS-GF:RawScore": "ms-gf:raw_score",
+            "MS-GF:SpecEValue": "ms-gf:spec_evalue",
+            "scan start time": "retention_time_seconds",
+            "peptide_ref": "sequence",
+            "scan number(s)": "spectrum_id",
+            "spectrum title": "spectrum_title",
         }
         self.metadata = {
             "File Origin": "MSGFPlus",
