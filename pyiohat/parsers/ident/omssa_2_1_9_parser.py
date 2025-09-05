@@ -20,10 +20,16 @@ class Omssa_Parser(IdentBaseParser):
         self.df = pd.read_csv(self.input_file)
 
         self.mapping_dict = {
-            v: k
-            for k, v in self.param_mapper.get_default_params(style=self.style)[
-                "header_translations"
-            ]["translated_value"].items()
+            " Accession": "accession",
+            " Theo Mass": "calc_mz",
+            " Charge": "charge",
+            " Mass": "exp_mz",
+            " Mods": "modifications",
+            " E-value": "omssa:evalue",
+            " P-value": "omssa:pvalue",
+            " Peptide": "sequence",
+            "Spectrum number": "spectrum_id",
+            " Filename/id": "spectrum_title",
         }
         self.df.rename(columns=self.mapping_dict, inplace=True)
         self.df.columns = self.df.columns.str.lstrip(" ")
