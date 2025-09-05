@@ -67,7 +67,7 @@ def test_engine_parsers_ptmshepherd_metadata():
     )
     assert parser.metadata
     assert parser.metadata["validation_score_field"] == "pglyco:TotalScore"
-    assert parser.metadata["bigger_scores_better"] == True
+    assert parser.metadata["bigger_scores_better"] == False
 
 
 def test_engine_parsers_ptmshepherd_check_parser_compatibility():
