@@ -11,8 +11,6 @@ def test_engine_parsers_ptmshepherd_init():
             "cpus": 2,
             "enzyme": "(?<=[KR])(?![P])",
             "terminal_cleavage_site_integrity": "any",
-            "validation_score_field": {"MSFragger_4_0": "msfragger:hyperscore"},
-            "bigger_scores_better": {"MSFragger_4_0": True},
             "modifications": [
                 {
                     "aa": "M",
@@ -45,8 +43,6 @@ def test_engine_parsers_ptmshepherd_metadata():
             "cpus": 2,
             "enzyme": "(?<=[KR])(?![P])",
             "terminal_cleavage_site_integrity": "any",
-            "validation_score_field": {"MSFragger_4_0": "msfragger:hyperscore"},
-            "bigger_scores_better": {"MSFragger_4_0": True},
             "modifications": [
                 {
                     "aa": "M",
@@ -70,7 +66,7 @@ def test_engine_parsers_ptmshepherd_metadata():
         },
     )
     assert parser.metadata
-    assert parser.metadata["validation_score_field"] == "msfragger:hyperscore"
+    assert parser.metadata["validation_score_field"] == "pglyco:TotalScore"
     assert parser.metadata["bigger_scores_better"] == True
 
 
@@ -92,8 +88,6 @@ def test_engine_parsers_ptmshepherd_check_dataframe_integrity():
             "database": db_path,
             "enzyme": "(?<=[KR])(?![P])",
             "terminal_cleavage_site_integrity": "any",
-            "validation_score_field": {"MSFragger_4_0": "msfragger:hyperscore"},
-            "bigger_scores_better": {"MSFragger_4_0": True},
             "modifications": [
                 {
                     "aa": "M",
