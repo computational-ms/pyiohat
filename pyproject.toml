@@ -19,19 +19,3 @@ extend-exclude = '''
   | profiling
 )/
 '''
-
-[tool.tox]
-legacy_tox_ini = """
-[tox]
-envlist = py38,py39
-isolated_build = True
-[testenv]
-commands =
-    pytest tests {posargs}
-[testenv:coverage]
-deps = -Ur{toxinidir}/requirements_dev.txt
-commands =
-    coverage erase
-    coverage run --source=pyiohat {envbindir}/pytest {posargs}
-    coverage report -m
-"""
