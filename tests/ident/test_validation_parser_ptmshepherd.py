@@ -4,9 +4,7 @@ from pyiohat.parsers.ident.ptmshepherd_parser import PTMShepherd_Parser
 
 
 def test_engine_parsers_ptmshepherd_init():
-    input_file = (
-        pytest._test_path / "data" / "ptmshepherd_parser_input_file.tsv"
-    )
+    input_file = pytest._test_path / "data" / "ptmshepherd_parser_input_file.tsv"
     parser = PTMShepherd_Parser(
         input_file,
         params={
@@ -40,9 +38,7 @@ def test_engine_parsers_ptmshepherd_init():
 
 
 def test_engine_parsers_ptmshepherd_metadata():
-    input_file = (
-        pytest._test_path / "data" / "ptmshepherd_parser_input_file.tsv"
-    )
+    input_file = pytest._test_path / "data" / "ptmshepherd_parser_input_file.tsv"
     parser = PTMShepherd_Parser(
         input_file,
         params={
@@ -79,9 +75,7 @@ def test_engine_parsers_ptmshepherd_metadata():
 
 
 def test_engine_parsers_ptmshepherd_check_parser_compatibility():
-    input_file = (
-        pytest._test_path / "data" / "ptmshepherd_parser_input_file.tsv"
-    )
+    input_file = pytest._test_path / "data" / "ptmshepherd_parser_input_file.tsv"
     assert PTMShepherd_Parser.check_parser_compatibility(input_file) is True
 
 
