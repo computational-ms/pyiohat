@@ -59,7 +59,7 @@ class PTMShepherd_Parser(IdentBaseParser):
         if not "search_engine" in self.df.columns:
             # This means the parser is running directly after search + ptmshepherd without pyiohat inbetween
             # search engine must have been msfragger, write bigger_score_better and validation_score_field accordinglly
-            metadata.append(
+            metadata.update(
                 {
                     "validation_score_field": "msfragger:hyperscore",
                     "bigger_scores_better": True,
@@ -103,7 +103,7 @@ class PTMShepherd_Parser(IdentBaseParser):
 
             original_metadata = parser_instance.metadata
 
-            metadata.append(
+            metadata.update(
                 {
                     "validation_score_field": original_metadata[
                         "validation_score_field"
