@@ -7,6 +7,7 @@ import regex as re
 from loguru import logger
 from importlib import import_module
 from pyiohat.parsers.ident_base_parser import IdentBaseParser
+from pyiohat.parsers.base_parser import BaseParser
 from pprint import pprint
 from itertools import combinations
 from chemical_composition import chemical_composition_kb
