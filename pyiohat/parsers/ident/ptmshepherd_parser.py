@@ -83,7 +83,7 @@ class PTMShepherd_Parser(IdentBaseParser):
             for k, v in parsers_dict.items():
                 if k in search_engine:
                     parser_name = v
-            original_parser_module = f"{__package__}.{module_name}"
+            original_parser_module = f"{__package__}.{parser_name}"
             import_module(original_parser_module)
             parser_classes = []
             for cat in BaseParser.__subclasses__():
