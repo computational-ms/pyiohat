@@ -139,7 +139,7 @@ class IdentBaseParser(BaseParser):
         new_columns = new_columns.dropna(axis=0, how="all")
         if len(new_columns) != len(self.df):
             logger.warning(
-                f"{len(self.df)-len(new_columns)} PSMs were dropped because their respective sequences could not be mapped."
+                f"{len(self.df) - len(new_columns)} PSMs were dropped because their respective sequences could not be mapped."
             )
         self.df = self.df.iloc[new_columns.index, :].reset_index(drop=True)
         if self.style and self.style in ("pglyco_db_style_1"):

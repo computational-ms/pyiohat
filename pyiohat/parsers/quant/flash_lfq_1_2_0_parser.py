@@ -21,10 +21,28 @@ class FlashLFQ_1_2_0_Parser(QuantBaseParser):
         super().__init__(*args, **kwargs)
         self.style = "flash_lfq_style_1"
         self.mapping_dict = {
-            v: k
-            for k, v in self.param_mapper.get_default_params(style=self.style)[
-                "header_translations"
-            ]["translated_value"].items()
+            "Peak Apex Mass Error (ppm)": "accuracy_mz",
+            "Precursor Charge": "charge",
+            "Base Sequences Mapped": "flashlfq:base_sequences_mapped",
+            "Full Sequence": "flashlfq:full_sequence",
+            "Full Sequences Mapped": "flashlfq:full_sequences_mapped",
+            "MBR Score": "flashlfq:mbr_score",
+            "MS2 Retention Time": "flashlfq:ms2_retention_time",
+            "Num Charge States Observed": "flashlfq:num charge states observed",
+            "Peak Charge": "flashlfq:peak_charge",
+            "Peak Detection Type": "flashlfq:peak_detection_type",
+            "Peak RT Apex": "flashlfq:peak_rt_apex",
+            "Peak RT End": "flashlfq:peak_rt_end",
+            "Peak RT Start": "flashlfq:peak_rt_start",
+            "Peak Split Valley RT": "flashlfq:peak_split_valley_rt",
+            "Peptide Monoisotopic Mass": "flashlfq:peptide_monoisotopic_mass",
+            "Protein Group": "flashlfq:protein_group",
+            "PSMs Mapped": "flashlfq:psms_mapped",
+            "Peak intensity": "quant_value",
+            "File Name": "raw_data_location",
+            "Peak MZ": "reported_mz",
+            "Theoretical MZ": "theoretical_mz",
+            "Base Sequence": "trivial_name",
         }
         self.df = pd.read_csv(self.input_file, delimiter="\t")
         self.df.rename(columns=self.mapping_dict, inplace=True)

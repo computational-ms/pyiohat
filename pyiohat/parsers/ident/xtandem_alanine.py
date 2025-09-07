@@ -22,10 +22,16 @@ class XTandemAlanine_Parser(IdentBaseParser):
         self.search_engine = None
         self.style = "xtandem_style_1"
         self.mapping_dict = {
-            v: k
-            for k, v in self.param_mapper.get_default_params(style=self.style)[
-                "header_translations"
-            ]["translated_value"].items()
+            "z": "charge",
+            "rt": "retention_time_seconds",
+            "seq": "sequence",
+            "b_ions": "x!tandem:b_ions",
+            "b_score": "x!tandem:b_score",
+            "delta": "x!tandem:delta",
+            "hyperscore": "x!tandem:hyperscore",
+            "nextscore": "x!tandem:nextscore",
+            "y_ions": "x!tandem:y_ions",
+            "y_score": "x!tandem:y_score",
         }
         self.metadata = {
             "File Origin": "XtandemAlanine",
@@ -162,7 +168,7 @@ class XTandemAlanine_Parser(IdentBaseParser):
                         & df["modifications"].str.join("|").str.contains(m)
                     )
                     if in_seq.sum() != 0:
-                        new_mods.loc[in_seq] += f"{name}:{int(pos)+1};"
+                        new_mods.loc[in_seq] += f"{name}:{int(pos) + 1};"
                     elif n_term.sum() != 0:
                         new_mods.loc[n_term] += f"{name}:0;"
                     else:
