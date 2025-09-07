@@ -135,4 +135,6 @@ class BaseParser:
         self.df.drop_duplicates(inplace=True)
         rows_dropped = init_len - len(self.df)
         if rows_dropped != 0:
-            logger.warning(f"{rows_dropped} duplicated rows were dropped in output csv.")
+            logger.warning(
+                f"{rows_dropped} duplicated rows were dropped in output csv."
+            )
