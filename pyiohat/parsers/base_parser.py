@@ -100,7 +100,11 @@ class BaseParser:
         Operations are performed inplace on self.df
         """
         # Set missing columns to None and reorder columns in standardized manner
-        if self.style and self.style in ("pglyco_db_style_1", "glyco_decipher_style_1", "ptmshepherd_style_1"):
+        if self.style and self.style in (
+            "pglyco_db_style_1",
+            "glyco_decipher_style_1",
+            "ptmshepherd_style_1",
+        ):
             self.required_headers = self._load_model("ident_glyco_parser_model.json")
         col_order = pd.Series(self.required_headers.keys())
         new_cols = col_order[~col_order.isin(self.df.columns)].to_list()
