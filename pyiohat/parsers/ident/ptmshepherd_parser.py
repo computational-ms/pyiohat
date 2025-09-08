@@ -175,7 +175,7 @@ class PTMShepherd_Parser(IdentBaseParser):
             str_regex_on_mod = re.search(r"^\d+", mod)
             if str_regex_on_mod is not None:
                 pos = int(str_regex_on_mod.group(0))
-            
+
             # Check for N-term in the raw string itself (independent of mapping)
             if pos is None and "N-term" in mod:
                 pos = 0
@@ -200,7 +200,6 @@ class PTMShepherd_Parser(IdentBaseParser):
             else:
                 return f"NON_MAPPABLE:{pos}"
         return mod_str
-
 
     def translate_mods(self):
         """
@@ -234,22 +233,26 @@ class PTMShepherd_Parser(IdentBaseParser):
                 ]
                 if len(potential_mods) == 1:
                     potential_names[unmapped_mass] = potential_mods[0]
-        
+
         for unmapped_mass in {k for k, v in potential_names.items() if v == []}:
-            mask = self.df["glycan_composition"].str.contains(fr"%\s*{unmapped_mass}\b", regex=True, na=False)
+            mask = self.df["glycan_composition"].str.contains(
+                rf"%\s*{unmapped_mass}\b", regex=True, na=False
+            )
             if mask.any():
-                matching_mods = self.df.loc[mask, "glycan_composition"].str.split(", ").explode()
+                matching_mods = (
+                    self.df.loc[mask, "glycan_composition"].str.split(", ").explode()
+                )
                 matching_prefixes = {
                     mod.split(" % ")[0]
                     for mod in matching_mods
-                    if re.search(fr"%\s*{unmapped_mass}\b", mod)
+                    if re.search(rf"%\s*{unmapped_mass}\b", mod)
                 }
                 if len(matching_prefixes) == 1:
                     potential_names[unmapped_mass] = [matching_prefixes.pop()]
                 elif len(matching_prefixes) > 1:
                     raise ValueError(
                         f"Ambiguous mapping for mass {unmapped_mass}: {matching_prefixes}"
-                )
+                    )
 
         non_mappable_mods = {
             k: len(
