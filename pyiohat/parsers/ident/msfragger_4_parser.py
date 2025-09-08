@@ -233,113 +233,6 @@ class MSFragger_4_Parser(IdentBaseParser):
 
         return mods_translated.str.rstrip(";")
 
-    def annotate_delta_mass(self):
-        # glycan_dict = {23.58839: "Hex(2)[23.58839]", 79.24299: "Hex(2)[23.58839];ACDS(12)[55.6546]"}
-        # loop through u run dict and collect all glycans and their mass
-        glycans = {}
-        for mod in self.params["mapped_mods"]["opt"]:
-            if "labile" not in mod.keys():
-                continue
-            glycans[float(mod["mass"])] = f"{mod['name']}[{mod['mass']}]"
-        if glycans == {}:
-            return [None] * len(self.df["modifications"])
-        masses = list(glycans.keys())
-        mass_combos = []
-        for i in range(1, len(masses) + 1):
-            for combo in combinations(masses, i):
-                mass_combos.append(list(combo))
-
-        glycan_dict = {}
-        for combo in mass_combos:
-            value = ""
-            key = 0.0
-            for m in combo:
-                value = value + f"{glycans[m]};"
-                key = key + m
-            glycan_dict[key] = value
-        pprint(glycan_dict)
-        annotated_delta_mass = [
-            self._map_delta_mass(delta_mass, pep_mass, glycan_dict)
-            for delta_mass, pep_mass in zip(
-                self.df["mass_difference"], self.df["msfragger:neutral_mass_of_peptide"]
-            )
-        ]
-        return annotated_delta_mass
-
-    def _map_delta_mass(self, delta_mass, pep_mass, mass_glycan_lookup):
-        mass_diff = float(delta_mass)
-        pep_mass = float(pep_mass)
-        if -2 <= round(mass_diff) <= 2:
-            return None
-        n = 0
-        t_mass_diff_L, t_mass_diff_U = self._transform_mass_add_error(
-            mass_diff, pep_mass
-        )
-        for potential_mass in mass_glycan_lookup.keys():
-            if t_mass_diff_L <= potential_mass <= t_mass_diff_U:
-                return mass_glycan_lookup[potential_mass]
-        while True:
-            n += 1
-            mass_diff = mass_diff - chemical_composition_kb.PROTON
-            if n == 4:
-                pprint("Give up ----------------------------------------------------")
-                pprint(f"delta_mass: {delta_mass}, peptide_mass: {pep_mass}")
-                pprint(
-                    f"range searched: {self._transform_mass_add_error(mass_diff + 4 * (chemical_composition_kb.PROTON), pep_mass)[0]} to {self._transform_mass_add_error(mass_diff + 4 * (chemical_composition_kb.PROTON), pep_mass)[1]}"
-                )
-                pprint(
-                    f"range searched (1): {self._transform_mass_add_error(mass_diff + 3 * (chemical_composition_kb.PROTON), pep_mass)[0]} to {self._transform_mass_add_error(mass_diff + 3 * (chemical_composition_kb.PROTON), pep_mass)[1]}"
-                )
-                pprint(
-                    f"range searched (2): {self._transform_mass_add_error(mass_diff + 2 * (chemical_composition_kb.PROTON), pep_mass)[0]} to {self._transform_mass_add_error(mass_diff + 2 * (chemical_composition_kb.PROTON), pep_mass)[1]}"
-                )
-                pprint(
-                    f"range searched (3): {self._transform_mass_add_error(mass_diff + (chemical_composition_kb.PROTON), pep_mass)[0]} to {self._transform_mass_add_error(mass_diff + (chemical_composition_kb.PROTON), pep_mass)[1]}"
-                )
-                pprint(
-                    "-----------------------------------------------------------------------"
-                )
-                return "n=4"
-            t_mass_diff_L, t_mass_diff_U = self._transform_mass_add_error(
-                mass_diff, pep_mass
-            )
-            for potential_mass in mass_glycan_lookup.keys():
-                if t_mass_diff_L <= potential_mass <= t_mass_diff_U:
-                    return mass_glycan_lookup[potential_mass]
-        return None
-
-    def _transform_mass_add_error(self, mass, pep_mass):
-        if self.params["precursor_mass_tolerance_unit"] == "ppm":
-            lower_mass = (
-                mass
-                - 2
-                * self.params["precursor_mass_tolerance_minus"]
-                * (mass + pep_mass)
-                / 1e6
-            )
-            upper_mass = (
-                mass
-                + 2
-                * self.params["precursor_mass_tolerance_plus"]
-                * (mass + pep_mass)
-                / 1e6
-            )
-        elif self.params["precursor_mass_tolerance_unit"] != "da":
-            lower_mass = (mass + pep_mass) - 2 * self.params[
-                "precursor_mass_tolerance_minus"
-            ]
-            upper_mass = (mass + pep_mass) + 2 * self.params[
-                "precursor_mass_tolerance_plus"
-            ]
-        else:
-            print(
-                "[ERROR] mass tolerance unit {0} not supported".format(
-                    self.params["precursor_mass_tolerance_unit"]
-                )
-            )
-            sys.exit(1)
-        return lower_mass, upper_mass
-
     def unify(self):
         """
         Primary method to read and unify engine output.
@@ -354,7 +247,6 @@ class MSFragger_4_Parser(IdentBaseParser):
             charge=self.df["charge"],
         )
         self.df["modifications"] = self.translate_mods()
-        self.df["annotated_delta_mass"] = self.annotate_delta_mass()
         self.df = self.df.loc[
             ~self.df["modifications"].str.contains("NON_MAPPABLE", regex=False), :
         ]
