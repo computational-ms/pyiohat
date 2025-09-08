@@ -41,8 +41,6 @@ class PTMShepherd_Parser(IdentBaseParser):
             "Total Glycan Composition": "glycan_composition",
             "Glycan Score": "ptm_shepherd:Glycan Score",
             "Glycan q-value": "ptm_shepherd:Glycan q-value",
-            "peptide_is_decoy": "peptide_is_decoy",
-            "glycan_is_decoy": "glycan_is_decoy",
         }
         self.df.rename(columns=self.mapping_dict, inplace=True)
         self.df.columns = self.df.columns.str.lstrip(" ")
