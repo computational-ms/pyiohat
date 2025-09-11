@@ -37,7 +37,7 @@ class IdentBaseParser(BaseParser):
         super().__init__(*args, **kwargs)
         self.DELIMITER = self.params.get("delimiter", "<|>")
         self.PROTON = PROTON
-        self.IUPAC_AAS = tuple("ACDEFGHIJKLMNPQRSTUVWY")
+        self.IUPAC_AAS = tuple("ACDEFGHIKLMNPQRSTUVWY")
         self.df = None
 
         self.non_mappable_mods = set(
@@ -118,12 +118,27 @@ class IdentBaseParser(BaseParser):
         Operations are performed inplace on self.df
         """
         peptide_mapper = UPeptideMapper(self.params["database"])
-        mapped_peptides = peptide_mapper.map_peptides(self.df["sequence"].tolist())
 
-        peptide_mappings = [
-            merge_and_join_dicts(mapped_peptides[seq], self.DELIMITER)
-            for seq in self.df["sequence"]
-        ]
+        if self.style and self.style in ("pglyco_db_style_1"):
+            self.df["tmp_sequence"] = self.df["sequence"].copy()
+            mask = self.df["peptide_is_decoy"]
+            self.df.loc[mask, "tmp_sequence"] = self.df.loc[mask, "tmp_sequence"].str[
+                ::-1
+            ]
+            mapped_peptides = peptide_mapper.map_peptides(
+                self.df["tmp_sequence"].tolist()
+            )
+            peptide_mappings = [
+                merge_and_join_dicts(mapped_peptides[seq], self.DELIMITER)
+                for seq in self.df["tmp_sequence"]
+            ]
+        else:
+            mapped_peptides = peptide_mapper.map_peptides(self.df["sequence"].tolist())
+
+            peptide_mappings = [
+                merge_and_join_dicts(mapped_peptides[seq], self.DELIMITER)
+                for seq in self.df["sequence"]
+            ]
 
         columns_translations = {
             "start": "sequence_start",
@@ -142,8 +157,17 @@ class IdentBaseParser(BaseParser):
                 f"{len(self.df) - len(new_columns)} PSMs were dropped because their respective sequences could not be mapped."
             )
         self.df = self.df.iloc[new_columns.index, :].reset_index(drop=True)
+
         if self.style and self.style in ("pglyco_db_style_1"):
-            self.df["sequence"] = self.df["sequence"].astype(str).str.replace("J", "N")
+            self.df.drop("tmp_sequence", axis=1, inplace=True)
+            self.df["protein_id"] = self.df.apply(
+                lambda row: (
+                    f"decoy_{row['protein_id']}"
+                    if row["peptide_is_decoy"]
+                    else row["protein_id"]
+                ),
+                axis=1,
+            )
 
     def check_enzyme_specificity(self):
         """Check consistency of N/C-terminal cleavage sites.
@@ -213,7 +237,6 @@ class IdentBaseParser(BaseParser):
         Offsets are calculated between theoretical and experimental mass-to-charge ratio.
         Operations are performed inplace on self.df
         """
-        self.IUPAC_AAS = tuple("ACDEFGHIKLMNPQRSTUVWY")
         all_compositions = {}
         for aa in self.IUPAC_AAS:
             self.cc.use(sequence=aa)

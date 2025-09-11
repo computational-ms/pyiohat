@@ -80,7 +80,7 @@ def test_engine_parsers_pglyco_check_parser_compatibility():
 def test_engine_parsers_pglyco_check_dataframe_integrity():
     input_file = pytest._test_path / "data" / "test_pglyco_3.txt"
     rt_lookup_path = pytest._test_path / "data" / "test_pglyco_3_meta_data.csv"
-    db_path = pytest._test_path / "data" / "test_pglyco_3.fasta"
+    db_path = pytest._test_path / "data" / "test_glyco_decipher_1.fasta"
 
     parser = PGlyco_3_Parser(
         input_file,
@@ -125,3 +125,4 @@ def test_engine_parsers_pglyco_check_dataframe_integrity():
     assert (df["is_decoy"] == True).sum() == 5
     assert df["glycan_composition"].str.contains("NulNAcA").sum() == 8
     assert df["glycan_composition"].str.contains("dHex").sum() == 1
+    assert df["protein_id"].str.contains("decoy_").sum() == 1
