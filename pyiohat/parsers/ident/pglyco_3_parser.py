@@ -224,6 +224,7 @@ class PGlyco_3_Parser(IdentBaseParser):
             ".",
             expand=True,
         )[1]
+        self.df["sequence"] = self.df["sequence"].astype(str).str.replace("J", "N")
         self.df["glycan_composition"] = self.convert_glycan_composition()
         self.convert_is_decoy_columns()
         self.df["modifications"] = self.adjust_modifications()
