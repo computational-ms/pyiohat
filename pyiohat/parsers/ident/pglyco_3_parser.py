@@ -22,60 +22,55 @@ class PGlyco_3_Parser(IdentBaseParser):
         self.df = pd.read_csv(self.input_file, delimiter="\t")
         self.df.dropna(axis=1, how="all", inplace=True)
         self.mapping_dict = {
-            "GlySpec": "pglyco:GlySpec",
-            "PepSpec": "pglyco:PepSpec",
+            # "GlySpec": "pglyco:GlySpec",
+            # "PepSpec": "pglyco:PepSpec",
             "RawName": "raw_data_location",
             "Scan": "spectrum_id",
             "RT": "retention_time_seconds",
-            "PrecursorMH": "pglyco:PrecursorMH",
+            # "PrecursorMH": "pglyco:PrecursorMH",
             "PrecursorMZ": "exp_mz",
             "Charge": "charge",
             "Rank": "rank",
             "Peptide": "sequence",
             "Mod": "modifications",
-            "PeptideMH": "pglyco:PeptideMH",
-            "Glycan(H,N,A,F)": "pglyco:Glycan(H,N,A,F)",
+            # "PeptideMH": "pglyco:PeptideMH",
+            # "Glycan(H,N,A,F)": "pglyco:Glycan(H,N,A,F)",
             "GlycanComposition": "glycan_composition",
-            "PlausibleStruct": "pglyco:PlausibleStruct",
-            "GlyID": "pglyco:GlyID",
-            "GlyFrag": "pglyco:GlyFrag",
-            "GlyMass": "pglyco:GlyMass",
-            "GlySite": "pglyco:GlySite",
-            "TotalScore": "pglyco:TotalScore",
-            "PepScore": "pglyco:PepScore",
-            "GlyScore": "pglyco:GlyScore",
-            "CoreMatched": "pglyco:CoreMatched",
-            "MassDeviation": "pglyco:MassDeviation",
-            "PPM": "pglyco:PPM",
-            "GlyIonRatio": "pglyco:GlyIonRatio",
-            "byIonRatio": "pglyco:byIonRatio",
-            "czIonRatio": "pglyco:czIonRatio",
+            # "PlausibleStruct": "pglyco:PlausibleStruct",
+            # "GlyID": "pglyco:GlyID",
+            # "GlyFrag": "pglyco:GlyFrag",
+            # "GlyMass": "pglyco:GlyMass",
+            # "GlySite": "pglyco:GlySite",
+            # "TotalScore": "pglyco:TotalScore",
+            # "PepScore": "pglyco:PepScore",
+            # "GlyScore": "pglyco:GlyScore",
+            # "CoreMatched": "pglyco:CoreMatched",
+            # "MassDeviation": "pglyco:MassDeviation",
+            # "PPM": "pglyco:PPM",
+            # "GlyIonRatio": "pglyco:GlyIonRatio",
+            # "byIonRatio": "pglyco:byIonRatio",
+            # "czIonRatio": "pglyco:czIonRatio",
             "GlyDecoy": "glycan_is_decoy",
             "PepDecoy": "peptide_is_decoy",
-            "Ion_163.06": "pglyco:Ion_163.06",
-            "Ion_366.14": "pglyco:Ion_366.14",
-            "Ion_204.09": "pglyco:Ion_204.09",
-            "Ion_138.05": "pglyco:Ion_138.05",
-            "Ion_292.10": "pglyco:Ion_292.10",
-            "Ion_274.09": "pglyco:Ion_274.09",
+            # "Ion_163.06": "pglyco:Ion_163.06",
+            # "Ion_366.14": "pglyco:Ion_366.14",
+            # "Ion_204.09": "pglyco:Ion_204.09",
+            # "Ion_138.05": "pglyco:Ion_138.05",
+            # "Ion_292.10": "pglyco:Ion_292.10",
+            # "Ion_274.09": "pglyco:Ion_274.09",
         }
-        # self.mapping_dict = {
-        #     v: k
-        #     for k, v in self.param_mapper.get_default_params(style=self.style)[
-        #         "header_translations"
-        #     ]["translated_value"].items()
-        # }
-        # pprint(f"mapping dict")
-        # pprint(self.mapping_dict)
+
+        original_columns = set(self.df.columns)
         self.df.rename(columns=self.mapping_dict, inplace=True)
-        # pprint(f"renamed df")
-        # pprint(self.df)
+        unmapped_columns = original_columns.difference(self.mapping_dict.keys())
+        prefix_mapping_dict = {col: f"pglyco:{col}" for col in unmapped_columns}
+        self.df.rename(columns=prefix_mapping_dict, inplace=True)
         self.df.columns = self.df.columns.str.lstrip(" ")
         if not "modifications" in self.df.columns:
             self.df["modifications"] = ""
-        self.reference_dict.update({k: None for k in self.mapping_dict.values()})
+        self.reference_dict.update({k: None for k in self.df.columns.tolist()})
         self.metadata = {
-            "File Origin": "pGlyco",
+            "File Origin": "pglyco_3",
             "Version": [3.0, 3.1],
             "bigger_scores_better": True,
             "validation_score_field": "pglyco:TotalScore",
@@ -113,7 +108,7 @@ class PGlyco_3_Parser(IdentBaseParser):
             "Peptide",
             "Mod",
             "PeptideMH",
-            "Glycan(H,N,A,F)",
+            # "Glycan(H,N,A,F)",
             "GlycanComposition",
             "PlausibleStruct",
             "GlyID",
