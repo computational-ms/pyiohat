@@ -52,11 +52,10 @@ class PeptideForest_Parser(IdentBaseParser):
         unmapped_columns = original_columns.difference(untouched_columns)
         prefix_mapping_dict = {col: f"peptide_forest:{col}" for col in unmapped_columns}
         self.df.rename(columns=prefix_mapping_dict, inplace=True)
-        self.df.rename(columns=self.mapping_dict, inplace=True)
         self.df.columns = self.df.columns.str.lstrip(" ")
-        self.reference_dict.update({k: None for k in self.mapping_dict.values()})
+        self.reference_dict.update({k: None for k in self.df.columns.tolist()})
         self.metadata = {
-            "File Origin": "PeptideForest",
+            "File Origin": "peptide_forest_3",
             "Version": ["3.1"],
             "bigger_scores_better": True,
             "validation_score_field": "peptide_forest:q-value_peptide_forest",
@@ -80,33 +79,36 @@ class PeptideForest_Parser(IdentBaseParser):
                 head = "".join([next(f) for _ in range(1)])
             except StopIteration:
                 head = ""
-        head = set(head.rstrip("\n").split("\t"))
-        ref_columns = {
-            "raw_data_location",
-            "spectrum_id",
-            "sequence",
-            "modifications",
-            "is_decoy",
-            "protein_id",
-            "charge",
-            "accuracy_ppm",
-            "accuracy_ppm_C12",
-            "enzc",
-            "enzn",
-            "exp_mass",
-            "is_immutable",
-            "mass_delta",
-            "missed_cleavages",
-            "retention_time_seconds",
-            "ucalc_mass",
-            "pep_len",
-            "count_prot",
-            "score_processed_peptide_forest",
-            "q-value_peptide_forest",
-            "top_target_peptide_forest",
-            "rank_peptide_forest",
-        }
+        head = set(head.rstrip("\n").split(","))
+        ref_columns = set(
+            [
+                "raw_data_location",
+                "spectrum_id",
+                "sequence",
+                "modifications",
+                "is_decoy",
+                "protein_id",
+                "charge",
+                "accuracy_ppm",
+                "accuracy_ppm_C12",
+                "enzc",
+                "enzn",
+                "exp_mass",
+                "is_immutable",
+                "mass_delta",
+                "missed_cleavages",
+                "retention_time_seconds",
+                "ucalc_mass",
+                "pep_len",
+                "count_prot",
+                "score_processed_peptide_forest",
+                "q-value_peptide_forest",
+                "top_target_peptide_forest",
+                "rank_peptide_forest",
+            ]
+        )
         columns_match = len(ref_columns.difference(head)) == 0
+        print(ref_columns.difference(head))
         return is_csv and columns_match
 
     def unify(self):
@@ -116,6 +118,7 @@ class PeptideForest_Parser(IdentBaseParser):
         Returns:
             self.df (pd.DataFrame): unified dataframe
         """
+        self.df["search_engine"] = "combined"
         self.df["validation_engine"] = "peptide_forest_3"
         self.process_unify_style()
 
