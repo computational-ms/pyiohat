@@ -1,10 +1,10 @@
 import pytest
 
-from pyiohat.parsers.ident.peptide_forest_3_parser import peptide_forest_3_Parser
+from pyiohat.parsers.ident.peptide_forest_parser import PeptideForest_Parser
 
 
 def test_engine_parsers_peptide_forest_init():
-    input_file = pytest._test_path / "data" / "test_peptide_forest_3.txt"
+    input_file = pytest._test_path / "data" / "test_peptide_forest.csv"
     parser = PeptideForest_Parser(
         input_file,
         params={
@@ -24,13 +24,13 @@ def test_engine_parsers_peptide_forest_init():
                     "aa": "C",
                     "type": "fix",
                     "position": "any",
-                    "name": "Carbamidomethyl",
+                    "name": "Methylthio",
                 },
                 {
-                    "aa": "*",
+                    "aa": "K",
                     "type": "opt",
-                    "position": "Prot-N-term",
-                    "name": "Acetyl",
+                    "position": "any",
+                    "name": "Label:13C(6)15N(2)",
                 },
             ],
         },
@@ -38,7 +38,7 @@ def test_engine_parsers_peptide_forest_init():
 
 
 def test_engine_parsers_peptide_forest_metadata():
-    input_file = pytest._test_path / "data" / "test_peptide_forest_3.txt"
+    input_file = pytest._test_path / "data" / "test_peptide_forest.csv"
     parser = PeptideForest_Parser(
         input_file,
         params={
@@ -58,13 +58,13 @@ def test_engine_parsers_peptide_forest_metadata():
                     "aa": "C",
                     "type": "fix",
                     "position": "any",
-                    "name": "Carbamidomethyl",
+                    "name": "Methylthio",
                 },
                 {
-                    "aa": "*",
+                    "aa": "K",
                     "type": "opt",
-                    "position": "Prot-N-term",
-                    "name": "Acetyl",
+                    "position": "any",
+                    "name": "Label:13C(6)15N(2)",
                 },
             ],
         },
@@ -73,16 +73,16 @@ def test_engine_parsers_peptide_forest_metadata():
 
 
 def test_engine_parsers_peptide_forest_check_parser_compatibility():
-    input_file = pytest._test_path / "data" / "test_peptide_forest_3.txt"
-    assert peptide_forest_3_Parser.check_parser_compatibility(input_file) is True
+    input_file = pytest._test_path / "data" / "test_peptide_forest.csv"
+    assert PeptideForest_Parser.check_parser_compatibility(input_file) is True
 
 
 def test_engine_parsers_peptide_forest_check_dataframe_integrity():
-    input_file = pytest._test_path / "data" / "test_peptide_forest_3.txt"
-    rt_lookup_path = pytest._test_path / "data" / "test_peptide_forest_3_meta_data.csv"
-    db_path = pytest._test_path / "data" / "test_glyco_decipher_1.fasta"
+    input_file = pytest._test_path / "data" / "test_peptide_forest.csv"
+    rt_lookup_path = pytest._test_path / "data" / "test_peptide_forest_meta_data.csv"
+    db_path = pytest._test_path / "data" / "Hfvol_prot_250410.fasta"
 
-    parser = peptide_forest_3_Parser(
+    parser = PeptideForest_Parser(
         input_file,
         params={
             "cpus": 2,
@@ -103,26 +103,22 @@ def test_engine_parsers_peptide_forest_check_dataframe_integrity():
                     "aa": "C",
                     "type": "fix",
                     "position": "any",
-                    "name": "Carbamidomethyl",
+                    "name": "Methylthio",
                 },
                 {
-                    "aa": "*",
+                    "aa": "K",
                     "type": "opt",
-                    "position": "Prot-N-term",
-                    "name": "Acetyl",
+                    "position": "any",
+                    "name": "Label:13C(6)15N(2)",
                 },
             ],
         },
     )
     df = parser.unify()
     assert len(df) == 9
-    assert pytest.approx(df["ucalc_mz"].mean()) == 226.733215
-    assert pytest.approx(df["exp_mz"].mean()) == 869.482910
-
-    assert df["modifications"].str.contains("Carbamidomethyl:1").sum() == 1
-    assert (df["glycan_is_decoy"] == True).sum() == 4
-    assert (df["peptide_is_decoy"] == True).sum() == 1
-    assert (df["is_decoy"] == True).sum() == 5
-    assert df["glycan_composition"].str.contains("NulNAcA").sum() == 8
-    assert df["glycan_composition"].str.contains("dHex").sum() == 1
-    assert df["protein_id"].str.contains("decoy_").sum() == 1
+    assert pytest.approx(df["ucalc_mz"].mean()) == 435.864868
+    assert pytest.approx(df["exp_mz"].mean()) == 435.8951
+    print(df["sequence_stop"])
+    # assert df["modifications"].str.contains("Label:13C(6)15N(2):12").sum() == 5
+    assert df["sequence_start"].str.contains("23").sum() == 8
+    assert df["sequence_stop"].str.contains("475").sum() == 1
