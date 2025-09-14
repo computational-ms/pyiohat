@@ -117,7 +117,6 @@ class PGlyco_3_Parser(IdentBaseParser):
             "Peptide",
             "Mod",
             "PeptideMH",
-            "Glycan(A,F,G,H,N)",
             "GlycanComposition",
             "PlausibleStruct",
             "GlyID",
