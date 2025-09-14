@@ -25,7 +25,9 @@ class PTMShepherd_Parser(IdentBaseParser):
         super().__init__(*args, **kwargs)
         self.style = "ptmshepherd_style_1"
 
-        self.df = pd.read_csv(self.input_file, delimiter="\t").drop(columns="glycan_composition", errors="ignore")
+        self.df = pd.read_csv(self.input_file, delimiter="\t").drop(
+            columns="glycan_composition", errors="ignore"
+        )
         self.df.dropna(axis=1, how="all", inplace=True)
         self.mapping_dict = {
             "Spectrum File": "raw_data_location",
@@ -78,7 +80,6 @@ class PTMShepherd_Parser(IdentBaseParser):
                 "comet_": "comet_2020_01_4_parser",
                 "pglyco_3": "pglyco_3_parser",
                 "glyco_decipher_1": "glyco_decipher_1_parser",
-                
             }
             search_engine = self.df["search_engine"][1]
             for k, v in parsers_dict.items():
@@ -110,7 +111,7 @@ class PTMShepherd_Parser(IdentBaseParser):
                         "validation_score_field"
                     ],
                     "bigger_scores_better": original_metadata["bigger_scores_better"],
-                    "File Origin": original_metadata["File Origin"]
+                    "File Origin": original_metadata["File Origin"],
                 }
             )
 
@@ -237,8 +238,10 @@ class PTMShepherd_Parser(IdentBaseParser):
                     potential_names[unmapped_mass] = potential_mods[0]
 
         for unmapped_mass in {k for k, v in potential_names.items() if v == []}:
-            mask = self.df["glycan_composition"].astype(str).str.contains(
-                rf"%\s*{unmapped_mass}\b", regex=True, na=False
+            mask = (
+                self.df["glycan_composition"]
+                .astype(str)
+                .str.contains(rf"%\s*{unmapped_mass}\b", regex=True, na=False)
             )
             if mask.any():
                 matching_mods = (
