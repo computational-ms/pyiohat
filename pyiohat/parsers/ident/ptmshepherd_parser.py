@@ -25,7 +25,7 @@ class PTMShepherd_Parser(IdentBaseParser):
         super().__init__(*args, **kwargs)
         self.style = "ptmshepherd_style_1"
 
-        self.df = pd.read_csv(self.input_file, delimiter="\t")
+        self.df = pd.read_csv(self.input_file, delimiter="\t").drop(columns="glycan_composition", errors="ignore")
         self.df.dropna(axis=1, how="all", inplace=True)
         self.mapping_dict = {
             "Spectrum File": "raw_data_location",
@@ -50,7 +50,6 @@ class PTMShepherd_Parser(IdentBaseParser):
     def _get_metadata(self):
 
         metadata = {
-            "File Origin": "PTMShepherd",
             "Version": ["2.0.5"],
             "Parser": "pyiohat/parsers/ident/ptmshepherd_parser.py",
         }
@@ -77,6 +76,9 @@ class PTMShepherd_Parser(IdentBaseParser):
                 "msamanda_2_0_0_17442": "msamanda_2_parser",
                 "mascot_": "mascot_2_6_2_parser",
                 "comet_": "comet_2020_01_4_parser",
+                "pglyco_3": "pglyco_3_parser",
+                "glyco_decipher_1": "glyco_decipher_1_parser",
+                
             }
             search_engine = self.df["search_engine"][1]
             for k, v in parsers_dict.items():
@@ -108,6 +110,7 @@ class PTMShepherd_Parser(IdentBaseParser):
                         "validation_score_field"
                     ],
                     "bigger_scores_better": original_metadata["bigger_scores_better"],
+                    "File Origin": original_metadata["File Origin"]
                 }
             )
 
@@ -196,7 +199,7 @@ class PTMShepherd_Parser(IdentBaseParser):
 
                     mod_str += f"{m}:{pos};"
             else:
-                return f"NON_MAPPABLE:{pos}"
+                mod_str += f"NON_MAPPABLE:{pos};"
         return mod_str
 
     def translate_mods(self):
@@ -220,6 +223,7 @@ class PTMShepherd_Parser(IdentBaseParser):
             m: [name for name in self.mod_mapper.mass_to_names(float(m), decimals=4)]
             for m in unique_mod_masses
         }
+        # print(f"potential_names right after initilizing: {potential_names}")
         # Map multiple mods
         for n in [2, 3]:
             for unmapped_mass in {k: v for k, v in potential_names.items() if v == []}:
@@ -233,7 +237,7 @@ class PTMShepherd_Parser(IdentBaseParser):
                     potential_names[unmapped_mass] = potential_mods[0]
 
         for unmapped_mass in {k for k, v in potential_names.items() if v == []}:
-            mask = self.df["glycan_composition"].str.contains(
+            mask = self.df["glycan_composition"].astype(str).str.contains(
                 rf"%\s*{unmapped_mass}\b", regex=True, na=False
             )
             if mask.any():
@@ -248,9 +252,11 @@ class PTMShepherd_Parser(IdentBaseParser):
                 if len(matching_prefixes) == 1:
                     potential_names[unmapped_mass] = [matching_prefixes.pop()]
                 elif len(matching_prefixes) > 1:
-                    raise ValueError(
-                        f"Ambiguous mapping for mass {unmapped_mass}: {matching_prefixes}"
+                    matching_prefixes_list = list(matching_prefixes)
+                    logger.warning(
+                        f"Ambiguous mapping for mass {unmapped_mass}: {matching_prefixes}\n{matching_prefixes_list[0]} will be used"
                     )
+                    potential_names[unmapped_mass] = [matching_prefixes_list[0]]
 
         non_mappable_mods = {
             k: len(
@@ -271,8 +277,8 @@ class PTMShepherd_Parser(IdentBaseParser):
             [v / len(self.df) for v in non_mappable_mods.values()], dtype="float64"
         )
         if any(non_mappable_percent > 0.001):
-            raise ValueError(
-                "Some modifications found in more than 0.1% of PSMs cannot be mapped."
+            logger.warning(
+                f"Some modifications found in {non_mappable_percent * 100}% of PSMs cannot be mapped."
             )
         if len(non_mappable_percent) > 0:
             logger.warning(
@@ -299,7 +305,7 @@ class PTMShepherd_Parser(IdentBaseParser):
         monosaccharide_dict = self.params.get("monosaccharide_dict", {"Fuc": "dHex"})
         s = self.df["glycan_composition"].astype(str)
         # Map the No Glycan Matched case to a blank string
-        result = s.mask(lambda x: x == "No Glycan Matched", other="")
+        result = s.replace(["No Glycan Matched", "nan"], "")
         # Remove everything after the first space eg. " % 1702.5814"
         result = result.str.split(" ").str[0]
 
@@ -311,7 +317,7 @@ class PTMShepherd_Parser(IdentBaseParser):
 
         # Find monomer(amount) pattern and map monomer into generic monomer names
         pattern = re.compile(r"([A-Za-z0-9]+)\((\d+)\)")
-        mapped_col = s.apply(lambda raw: pattern.sub(repl, raw))
+        mapped_col = result.apply(lambda raw: pattern.sub(repl, raw))
 
         return mapped_col
 
