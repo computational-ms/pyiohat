@@ -2,7 +2,7 @@
 
 import csv
 import multiprocessing as mp
-
+import json
 import ahocorasick
 import numpy as np
 import pandas as pd
@@ -243,6 +243,11 @@ class IdentBaseParser(BaseParser):
             all_compositions[aa] = self.cc.copy()
         for mod in self.mapped_mod_names:
             all_compositions[mod] = self.mod_mapper.name_to_composition(mod)[0]
+        glycan_db = self.params.get("glycan_database", None)
+        if glycan_db:
+            glycan_compositions = json.loads(glycan_db)
+            for glycan, composition in glycan_compositions.items():
+                all_compositions[glycan] = composition
 
         compositions, mono_masses = get_compositions_and_monoisotopic_masses(
             sequences=self.df["sequence"].to_numpy(dtype=str),
@@ -304,7 +309,7 @@ class IdentBaseParser(BaseParser):
         """
         rt_lookup = self._read_meta_info_lookup_file()
         self.df["spectrum_id"] = self.df["spectrum_id"].astype(int)
-        if self.style in ("comet_style_1", "omssa_style_1"):
+        if self.style in ("comet_style_1", "omssa_style_1", "glyco_decipher_style_1"):
             logger.warning(
                 "This engine does not provide retention time information. Grouping only by Spectrum ID. This may cause problems when working with multi-file inputs."
             )
