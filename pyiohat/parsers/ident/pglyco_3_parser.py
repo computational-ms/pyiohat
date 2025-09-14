@@ -21,6 +21,7 @@ class PGlyco_3_Parser(IdentBaseParser):
 
         self.df = pd.read_csv(self.input_file, delimiter="\t")
         self.df.dropna(axis=1, how="all", inplace=True)
+        original_columns = set(self.df.columns)
         self.mapping_dict = {
             "GlySpec": "pglyco:GlySpec",
             "PepSpec": "pglyco:PepSpec",
@@ -34,7 +35,7 @@ class PGlyco_3_Parser(IdentBaseParser):
             "Peptide": "sequence",
             "Mod": "modifications",
             "PeptideMH": "pglyco:PeptideMH",
-            "Glycan(H,N,A,F)": "pglyco:Glycan(H,N,A,F)",
+            "Glycan(A,F,G,H,N)": "pglyco:Glycan(A,F,G,H,N)",
             "GlycanComposition": "glycan_composition",
             "PlausibleStruct": "pglyco:PlausibleStruct",
             "GlyID": "pglyco:GlyID",
@@ -50,8 +51,8 @@ class PGlyco_3_Parser(IdentBaseParser):
             "GlyIonRatio": "pglyco:GlyIonRatio",
             "byIonRatio": "pglyco:byIonRatio",
             "czIonRatio": "pglyco:czIonRatio",
-            "GlyDecoy": "glycan_is_decoy",
-            "PepDecoy": "peptide_is_decoy",
+            "GlyDecoy": "pglyco:glycan_is_decoy",
+            "PepDecoy": "pglyco:peptide_is_decoy",
             "Ion_163.06": "pglyco:Ion_163.06",
             "Ion_366.14": "pglyco:Ion_366.14",
             "Ion_204.09": "pglyco:Ion_204.09",
@@ -68,6 +69,9 @@ class PGlyco_3_Parser(IdentBaseParser):
         # pprint(f"mapping dict")
         # pprint(self.mapping_dict)
         self.df.rename(columns=self.mapping_dict, inplace=True)
+        unmapped_columns = original_columns.difference(set(self.mapping_dict.keys()))
+        prefix_mapping_dict = {col: f"pglyco:{col}" for col in unmapped_columns}
+        self.df.rename(columns=prefix_mapping_dict, inplace=True)
         # pprint(f"renamed df")
         # pprint(self.df)
         self.df.columns = self.df.columns.str.lstrip(" ")
@@ -113,7 +117,6 @@ class PGlyco_3_Parser(IdentBaseParser):
             "Peptide",
             "Mod",
             "PeptideMH",
-            "Glycan(H,N,A,F)",
             "GlycanComposition",
             "PlausibleStruct",
             "GlyID",
@@ -202,6 +205,62 @@ class PGlyco_3_Parser(IdentBaseParser):
 
         return ";".join(transformed_mods)
 
+    def add_glycans_to_modifications(self):
+        """
+        Extends the 'modifications' column by adding glycans from
+        GlycanComposition (mapped to canonical sugar names) at the GlySite position.
+        Example: Oxidation:12;HexNAc(2)Hex(3)dHex(1)NeuAc(1):57
+        """
+        return self.df.apply(self._transform_glycan_entry, axis=1)
+
+    def _transform_glycan_entry(self, row):
+        # Mapping sinagle letters to sugar names as they are in pyiohat name_to_compostion dict so they can contribute to ucalc_mass ect.
+        pglyco_glyco_lookup = {
+            "H": "Hex",
+            "N": "HexNAc",
+            "F": "dHex",
+            "A": "NeuAc",
+            "G": "NeuGc",
+        }
+
+        canonical_order = ["HexNAc", "Hex", "dHex", "NeuAc", "NeuGc"]
+
+        base_mods = row.get("modifications", "")
+        gly_site = row.get("pglyco:GlySite")
+        gly_comp = row.get("glycan_composition", "")
+
+        if pd.isna(gly_site) or pd.isna(gly_comp):
+            return base_mods
+
+        import re
+
+        # --- Parse glycan composition ---
+        gly_dict = {}
+        for match in re.finditer(r"([A-Z])\((\d+)\)", gly_comp):
+            letter, count = match.groups()
+            count = int(count)
+            if count > 0 and letter in pglyco_glyco_lookup:
+                full_name = pglyco_glyco_lookup[letter]
+                gly_dict[full_name] = gly_dict.get(full_name, 0) + count
+
+        # --- Build glycan string in canonical order ---
+        gly_str_parts = []
+        for sugar in canonical_order:
+            if sugar in gly_dict:
+                gly_str_parts.append(f"{sugar}({gly_dict[sugar]})")
+
+        if not gly_str_parts:
+            return base_mods
+
+        gly_str = "".join(gly_str_parts) + f":{gly_site}"
+
+        # --- Combine with existing modifications ---
+        print(f"Added Glycan to Modifications: {gly_str}")
+        if base_mods:
+            return ";".join([base_mods, gly_str])
+        else:
+            return gly_str
+
     def convert_is_decoy_columns(self):
         """
         Converts 1/0 integer values in 'glycan_is_decoy' and 'peptide_is_decoy'
@@ -209,8 +268,12 @@ class PGlyco_3_Parser(IdentBaseParser):
         """
         conversion_map = {1: True, 0: False}
 
-        self.df["glycan_is_decoy"] = self.df["glycan_is_decoy"].map(conversion_map)
-        self.df["peptide_is_decoy"] = self.df["peptide_is_decoy"].map(conversion_map)
+        self.df["glycan_is_decoy"] = self.df["pglyco:glycan_is_decoy"].map(
+            conversion_map
+        )
+        self.df["peptide_is_decoy"] = self.df["pglyco:peptide_is_decoy"].map(
+            conversion_map
+        )
 
     def unify(self):
         """
@@ -225,9 +288,10 @@ class PGlyco_3_Parser(IdentBaseParser):
             expand=True,
         )[1]
         self.df["sequence"] = self.df["sequence"].astype(str).str.replace("J", "N")
+        self.df["modifications"] = self.adjust_modifications()
+        self.df["modifications"] = self.add_glycans_to_modifications()
         self.df["glycan_composition"] = self.convert_glycan_composition()
         self.convert_is_decoy_columns()
-        self.df["modifications"] = self.adjust_modifications()
         self.process_unify_style()
 
         return self.df
