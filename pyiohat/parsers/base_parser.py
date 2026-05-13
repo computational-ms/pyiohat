@@ -76,6 +76,7 @@ class BaseParser:
         with open(self.params["rt_pickle_name"], mode="r") as meta_csv:
             meta_reader = csv.DictReader(meta_csv)
             for row in meta_reader:
+                ms_level = int(row["ms_level"])
                 rt = float(row["rt"])
                 if row["rt_unit"] == "minute" or row["rt_unit"] == "min":
                     rt *= 60.0
@@ -85,14 +86,18 @@ class BaseParser:
                     precursor_mz = np.nan
                 else:
                     precursor_mz = float(row["precursor_mz"])
-                rt_lookup[int(row["spectrum_id"])][rt] = [
-                    row["lineage_root"],
-                    precursor_mz,
-                ]
+                rt_lookup[int(row["spectrum_id"])] = {
+                    "lineage_root" : row["lineage_root"],
+                    "precursor_mz" : precursor_mz,
+                    "rt" : rt,
+                    "ms_level" : ms_level,
+                }
         return rt_lookup
 
+
     def sanitize(self):
-        """Perform dataframe sanitation steps.
+        """Perform 
+        .dataframe sanitation steps.
 
         - Cast defined types
         - Columns that were not filled in but should exist in the unified format are added and set to None

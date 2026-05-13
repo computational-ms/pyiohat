@@ -3,6 +3,7 @@
 import csv
 import multiprocessing as mp
 
+from pathlib import Path
 import ahocorasick
 import numpy as np
 import pandas as pd
@@ -295,6 +296,7 @@ class IdentBaseParser(BaseParser):
         )
         self.df.loc[:, "mass_delta"] = self.df["exp_mass"] - self.df["ucalc_mass"]
 
+
     def get_meta_info(self):
         """Extract meta information.
 
@@ -304,48 +306,47 @@ class IdentBaseParser(BaseParser):
         """
         rt_lookup = self._read_meta_info_lookup_file()
         self.df["spectrum_id"] = self.df["spectrum_id"].astype(int)
-        if self.style in ("comet_style_1", "omssa_style_1"):
+
+        if self.style in ("comet_style_1", "omssa_style_1", "casanovo_style_1"):
             logger.warning(
                 "This engine does not provide retention time information. Grouping only by Spectrum ID. This may cause problems when working with multi-file inputs."
             )
             for name, grp in self.df.groupby("spectrum_id"):
-                mappable_within_precision = list(rt_lookup[name].keys())
-                if len(mappable_within_precision) == 1:
+                if name in rt_lookup:
+                    meta = rt_lookup[name]
+                    lineage_root = meta["lineage_root"]
+                    precursor_mz = meta["precursor_mz"]
+                    rt = meta["rt"]
                     self.df.loc[
                         grp.index,
                         ("raw_data_location", "exp_mz", "retention_time_seconds"),
-                    ] = rt_lookup[name][mappable_within_precision[0]] + [
-                        mappable_within_precision[0]
-                    ]
+                    ] = [lineage_root, precursor_mz, rt]
                 else:
                     logger.error(
                         f"Could not uniquely assign meta data to spectrum id {name}."
                     )
         else:
-            self.df["retention_time_seconds"] = self.df[
-                "retention_time_seconds"
-            ].astype(float)
+            self.df["retention_time_seconds"] = self.df["retention_time_seconds"].astype(
+                float
+            )
             for name, grp in self.df.groupby(["spectrum_id", "retention_time_seconds"]):
-                meta_rts = rt_lookup[name[0]].keys()
-                mappable_within_precision = [
-                    rt
-                    for rt in meta_rts
-                    if abs(name[1] - rt) <= 10**-self.rt_truncate_precision
-                ]
-                if len(mappable_within_precision) == 1:
-                    self.df.loc[
-                        grp.index,
-                        ("raw_data_location", "exp_mz", "retention_time_seconds"),
-                    ] = rt_lookup[name[0]][mappable_within_precision[0]] + [
-                        mappable_within_precision[0]
-                    ]
+                if name[0] in rt_lookup:
+                    meta = rt_lookup[name[0]]
+                    lineage_root = meta["lineage_root"]
+                    precursor_mz = meta["precursor_mz"]
+                    rt = meta["rt"]
+                    if abs(name[1] - rt) <= 10**-self.rt_truncate_precision:
+                        self.df.loc[
+                            grp.index,
+                            ("raw_data_location", "exp_mz", "retention_time_seconds"),
+                        ] = [lineage_root, precursor_mz, rt]
                 else:
                     logger.error(
                         f"Could not uniquely assign meta data to spectrum id, retention time {name}."
                     )
 
         self.df.loc[:, "spectrum_title"] = (
-            self.df["raw_data_location"]
+            self.df["raw_data_location"].apply(lambda x: Path(x).stem)
             + "."
             + self.df["spectrum_id"].astype(str)
             + "."

@@ -1,13 +1,13 @@
 import pytest
 
-from pyiohat.parsers.ident.msfragger_4_parser import MSFragger_4_Parser
+from pyiohat.parsers.ident.Casanovo_5_Parser import Casanovo_5_Parser
 
 
 def test_engine_parsers_msfragger_init():
     input_file = (
-        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_msfragger_4.tsv"
+        pytest._test_path / "data" / "test_casanovo.mztab"
     )
-    parser = MSFragger_4_Parser(
+    parser = Casanovo_5_Parser(
         input_file,
         params={
             "cpus": 2,
@@ -41,9 +41,9 @@ def test_engine_parsers_msfragger_init():
 
 def test_engine_parsers_msfragger_metadata():
     input_file = (
-        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_msfragger_4.tsv"
+        pytest._test_path / "data" / "test_casanovo.mztab"
     )
-    parser = MSFragger_4_Parser(
+    parser = Casanovo_5_Parser(
         input_file,
         params={
             "cpus": 2,
@@ -78,9 +78,9 @@ def test_engine_parsers_msfragger_metadata():
 
 def test_engine_parsers_msfragger_check_parser_compatibility():
     input_file = (
-        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_msfragger_4.tsv"
+        pytest._test_path / "data" / "test_casanovo.mztab"
     )
-    assert MSFragger_4_Parser.check_parser_compatibility(input_file) is True
+    assert Casanovo_5_Parser.check_parser_compatibility(input_file) is True
 
 
 def test_engine_parsers_msfragger_check_dataframe_integrity():
@@ -88,7 +88,7 @@ def test_engine_parsers_msfragger_check_dataframe_integrity():
     rt_lookup_path = pytest._test_path / "data" / "BSA1_ursgal_lookup.csv"
     db_path = pytest._test_path / "data" / "BSA.fasta"
 
-    parser = MSFragger_4_Parser(
+    parser = Casanovo_5_Parser(
         input_file,
         params={
             "cpus": 2,
@@ -138,17 +138,15 @@ def test_engine_parsers_msfragger_check_dataframe_integrity():
 
 def test_map_mod_translation_msfragger4():
     input_file = (
-        pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_msfragger_4.tsv"
+        pytest._test_path / "data" / "test_casanovo.mztab"
     )
 
-    parser = MSFragger_4_Parser(
+    parser = Casanovo_5_Parser(
         input_file,
         params={
             "cpus": 2,
             "enzyme": "(?<=[KR])(?![P])",
             "terminal_cleavage_site_integrity": "any",
-            "validation_score_field": {"MSFragger_4_0": "msfragger:hyperscore"},
-            "bigger_scores_better": {"MSFragger_4_0": True},
             "modifications": [
                 {
                     "aa": "M",
@@ -181,9 +179,9 @@ def test_map_mod_translation_msfragger4():
 
 # Tests for n-term and digits
 def test_c_terminal_tmt():
-    input_file = pytest._test_path / "data" / "test_positions_msfragger4.tsv"
+    input_file = pytest._test_path / "data" / "test_casanovo.mztab"
 
-    parser = MSFragger_4_Parser(
+    parser = Casanovo_5_Parser(
         input_file,
         params={
             "cpus": 2,
@@ -234,7 +232,7 @@ def test_msfragger_open_search():
     rt_lookup_path = pytest._test_path / "data" / "BSA1_ursgal_lookup.csv"
     db_path = pytest._test_path / "data" / "BSA.fasta"
 
-    parser = MSFragger_4_Parser(
+    parser = Casanovo_5_Parser(
         input_file,
         params={
             "cpus": 2,
