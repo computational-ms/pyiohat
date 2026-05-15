@@ -127,9 +127,11 @@ class DeNovoBaseParser(BaseParser):
             mapped_peptides = peptide_mapper.map_peptides(valid_seqs)
 
             peptide_mappings = [
-                merge_and_join_dicts(mapped_peptides[seq], self.DELIMITER)
-                if seq in mapped_peptides
-                else {}
+                (
+                    merge_and_join_dicts(mapped_peptides[seq], self.DELIMITER)
+                    if seq in mapped_peptides
+                    else {}
+                )
                 for seq in self.df["sequence"]
             ]
         else:
@@ -212,7 +214,11 @@ class DeNovoBaseParser(BaseParser):
             pren_seq.str.split(rf"{enzyme_pattern}").str[0].str.len() == 1
         ).groupby(pren_seq.index).agg(integrity_strictness) | (
             pren_seq.str[0] == "-"
-        ).groupby(pren_seq.index).agg(integrity_strictness)
+        ).groupby(
+            pren_seq.index
+        ).agg(
+            integrity_strictness
+        )
         postc_seq = (
             pd.concat(
                 [
@@ -228,7 +234,11 @@ class DeNovoBaseParser(BaseParser):
             postc_seq.str.split(rf"{enzyme_pattern}").str[0].str.len() == 1
         ).groupby(postc_seq.index).agg(integrity_strictness) | (
             postc_seq.str[-1] == "-"
-        ).groupby(postc_seq.index).agg(integrity_strictness)
+        ).groupby(
+            postc_seq.index
+        ).agg(
+            integrity_strictness
+        )
 
         internal_cuts = mapped_df["sequence"].str.split(rf"{enzyme_pattern}")
         self.df.loc[mapped_mask, "missed_cleavages"] = (
