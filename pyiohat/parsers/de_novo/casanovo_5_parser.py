@@ -107,7 +107,7 @@ class Casanovo_5_Parser(DeNovoBaseParser):
         # Initialize modifications and mass difference column if it doesn't exist
         if "modifications" not in self.df.columns:
             self.df["modifications"] = None
-   
+
         # Initialize lists for new data
         mass_differences = []
         modifications_list = []
@@ -133,11 +133,15 @@ class Casanovo_5_Parser(DeNovoBaseParser):
                 mass_differences.append(mass_diff)
                 seq = re.sub(r"\[([+-]?\d+\.?\d*)\]", "", seq)
                 try:
-                    matched_names = self.mod_mapper.mass_to_names(float(mass_diff), decimals=4)
+                    matched_names = self.mod_mapper.mass_to_names(
+                        float(mass_diff), decimals=4
+                    )
                     for name in matched_names:
                         mass_diff_mods.append(f"{name}:0")  # position 0 as placeholder
                 except Exception as e:
-                    print(f"Warning: mod_mapper lookup failed for mass {mass_diff}: {e}")
+                    print(
+                        f"Warning: mod_mapper lookup failed for mass {mass_diff}: {e}"
+                    )
             else:
                 mass_differences.append(None)
 
@@ -153,7 +157,7 @@ class Casanovo_5_Parser(DeNovoBaseParser):
                     )
                 )
                 modifications.append(f"{mod_name}:{position}")
-            all_modifications = mass_diff_mods + modifications 
+            all_modifications = mass_diff_mods + modifications
 
             if all_modifications:
                 modifications_list.append(";".join(all_modifications))
@@ -180,7 +184,9 @@ class Casanovo_5_Parser(DeNovoBaseParser):
         """
         if "spectrum_id" in self.df.columns:
             # Extract scan number from the format: scan=XXXX
-            self.df["spectrum_id"] = self.df["spectrum_id"].str.extract(r"scan=(\d+)")[0]
+            self.df["spectrum_id"] = self.df["spectrum_id"].str.extract(r"scan=(\d+)")[
+                0
+            ]
 
         # def _save_to_csv(self, filepath):
         """
@@ -288,9 +294,9 @@ class Casanovo_5_Parser(DeNovoBaseParser):
 
         # Convert retention time from minutes to seconds BEFORE process_unify_style
         if "retention_time_seconds" in self.df.columns:
-            self.df["retention_time_seconds"] = self.df["retention_time_seconds"].astype(
-                float
-            )
+            self.df["retention_time_seconds"] = self.df[
+                "retention_time_seconds"
+            ].astype(float)
 
         self.process_unify_style()
 

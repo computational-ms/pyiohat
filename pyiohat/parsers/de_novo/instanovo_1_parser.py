@@ -13,6 +13,7 @@ from chemical_composition import chemical_composition_kb
 from pathlib import Path
 from unimod_mapper.unimod_mapper import UnimodMapper
 
+
 class Instanovo_1_Parser(DeNovoBaseParser):
     """File parser for Instanovo 1"""
 
@@ -34,24 +35,24 @@ class Instanovo_1_Parser(DeNovoBaseParser):
         # pprint(self.df)
         self.mapping_dict = {
             "scan_number": "spectrum_id",
-            "precursor_mz" : "exp_mz",
+            "precursor_mz": "exp_mz",
             "precursor_charge": "charge",
-            "experiment_name":"raw_data_location",
+            "experiment_name": "raw_data_location",
             "spectrum_id": "spectrum_title",
-            "retention_time_seconds":"retention_time_seconds",
-            "diffusion_predictions_tokenised" : "instanovo:diffusion_predictions_tokenised",
-            "diffusion_predictions" : "instanovo:diffusion_predictions",
-            "diffusion_log_probabilities" : "instanovo:diffusion_log_probabilities",
-            "transformer_predictions":"instanovo:transformer_predictions",
-            "transformer_predictions_tokenised":"instanovo:transformer_predictions_tokenised",
-            "transformer_log_probabilities":"instanovo:transformer_log_probabilities",
-            "transformer_token_log_probabilities":"instanovo:transformer_token_log_probabilities",
-            "final_prediction":"sequence",
-            "modifications":"modifications",
-            "final_prediction_tokenised":"instanovo:final_prediction_tokenised",
-            "final_log_probabilities":"instanovo:final_log_probabilities",
-            "selected_model":"instanovo:selected_model",
-            "precursor_mass_match":"instanovo:precursor_mass_match",
+            "retention_time_seconds": "retention_time_seconds",
+            "diffusion_predictions_tokenised": "instanovo:diffusion_predictions_tokenised",
+            "diffusion_predictions": "instanovo:diffusion_predictions",
+            "diffusion_log_probabilities": "instanovo:diffusion_log_probabilities",
+            "transformer_predictions": "instanovo:transformer_predictions",
+            "transformer_predictions_tokenised": "instanovo:transformer_predictions_tokenised",
+            "transformer_log_probabilities": "instanovo:transformer_log_probabilities",
+            "transformer_token_log_probabilities": "instanovo:transformer_token_log_probabilities",
+            "final_prediction": "sequence",
+            "modifications": "modifications",
+            "final_prediction_tokenised": "instanovo:final_prediction_tokenised",
+            "final_log_probabilities": "instanovo:final_log_probabilities",
+            "selected_model": "instanovo:selected_model",
+            "precursor_mass_match": "instanovo:precursor_mass_match",
         }
         # pprint(f"mapping dict")
         # pprint(self.mapping_dict)
@@ -85,7 +86,7 @@ class Instanovo_1_Parser(DeNovoBaseParser):
         # Initialize modifications and mass difference column if it doesn't exist
         if "modifications" not in self.df.columns:
             self.df["modifications"] = None
-   
+
         # Initialize lists for new data
         modifications_list = []
         cleaned_sequences = []
@@ -101,7 +102,7 @@ class Instanovo_1_Parser(DeNovoBaseParser):
 
             seq = str(seq)
 
-            # Extract all modifications like [UNIMOD:35] 
+            # Extract all modifications like [UNIMOD:35]
             mod_pattern = r"\[([A-Za-z]+[A-Za-z0-9:.\-()]+)\]"
             modifications = []
 
@@ -112,12 +113,10 @@ class Instanovo_1_Parser(DeNovoBaseParser):
                         r"\[([A-Za-z]+[A-Za-z0-9:.\-()]+)\]", "", seq[: match.start()]
                     )
                 )
-                
 
                 # Look up unimod modifications by ID
                 # Try to resolve mod_name as a unimod ID to get canonical name(s)
                 try:
-                    
                     unimod_id_str = mod_name.split(":")[-1]
                     matched_names = self.mod_mapper.id_to_name(unimod_id_str)
                     if matched_names:
@@ -126,8 +125,9 @@ class Instanovo_1_Parser(DeNovoBaseParser):
                         # Fallback if the mapper returned an empty list
                         modifications.append(f"{mod_name}:{position}")
                 except Exception as e:
-                    logger.info(f"DEBUG: Exception during mod lookup for '{mod_name}': {e}")
- 
+                    logger.info(
+                        f"DEBUG: Exception during mod lookup for '{mod_name}': {e}"
+                    )
 
             if modifications:
                 modifications_list.append(";".join(modifications))
@@ -144,8 +144,6 @@ class Instanovo_1_Parser(DeNovoBaseParser):
         # Update modifications and sequence columns
         self.df["modifications"] = modifications_list
         self.df[seq_col] = cleaned_sequences
-
-  
 
     @classmethod
     def check_parser_compatibility(cls, file):
@@ -191,7 +189,6 @@ class Instanovo_1_Parser(DeNovoBaseParser):
         columns_match = len(ref_columns.difference(head)) == 0
         return is_instanovo_csv and columns_match
 
-
     def unify(self):
         """
         Primary method to read and unify engine output.
@@ -201,7 +198,7 @@ class Instanovo_1_Parser(DeNovoBaseParser):
         """
         self.df["search_engine"] = "instanovo_1_2_2"
 
-    
+        self.last_index = int(self.df.iloc[-1]["spectrum_id"])
         self.parse_sequence_modifications()
 
         # Drop rows where sequence is null (no prediction made)

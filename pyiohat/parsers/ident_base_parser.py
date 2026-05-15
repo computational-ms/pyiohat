@@ -199,11 +199,7 @@ class IdentBaseParser(BaseParser):
             pren_seq.str.split(rf"{enzyme_pattern}").str[0].str.len() == 1
         ).groupby(pren_seq.index).agg(integrity_strictness) | (
             pren_seq.str[0] == "-"
-        ).groupby(
-            pren_seq.index
-        ).agg(
-            integrity_strictness
-        )
+        ).groupby(pren_seq.index).agg(integrity_strictness)
         postc_seq = (
             pd.concat(
                 [
@@ -219,11 +215,7 @@ class IdentBaseParser(BaseParser):
             postc_seq.str.split(rf"{enzyme_pattern}").str[0].str.len() == 1
         ).groupby(postc_seq.index).agg(integrity_strictness) | (
             postc_seq.str[-1] == "-"
-        ).groupby(
-            postc_seq.index
-        ).agg(
-            integrity_strictness
-        )
+        ).groupby(postc_seq.index).agg(integrity_strictness)
 
         internal_cuts = self.df["sequence"].str.split(rf"{enzyme_pattern}")
         self.df.loc[:, "missed_cleavages"] = (
@@ -296,7 +288,6 @@ class IdentBaseParser(BaseParser):
         )
         self.df.loc[:, "mass_delta"] = self.df["exp_mass"] - self.df["ucalc_mass"]
 
-
     def get_meta_info(self):
         """Extract meta information.
 
@@ -322,13 +313,13 @@ class IdentBaseParser(BaseParser):
                         ("raw_data_location", "exp_mz", "retention_time_seconds"),
                     ] = [lineage_root, precursor_mz, rt]
                 else:
-                    logger.error(
+                    raise KeyError(
                         f"Could not uniquely assign meta data to spectrum id {name}."
                     )
         else:
-            self.df["retention_time_seconds"] = self.df["retention_time_seconds"].astype(
-                float
-            )
+            self.df["retention_time_seconds"] = self.df[
+                "retention_time_seconds"
+            ].astype(float)
             for name, grp in self.df.groupby(["spectrum_id", "retention_time_seconds"]):
                 if name[0] in rt_lookup:
                     meta = rt_lookup[name[0]]
@@ -341,7 +332,7 @@ class IdentBaseParser(BaseParser):
                             ("raw_data_location", "exp_mz", "retention_time_seconds"),
                         ] = [lineage_root, precursor_mz, rt]
                 else:
-                    logger.error(
+                    raise KeyError(
                         f"Could not uniquely assign meta data to spectrum id, retention time {name}."
                     )
 

@@ -27,5 +27,5 @@ def test_base_parser_read_rt_lookup_file_wo_precursor_mz_info():
     assert set(precursor_mzs) == {np.nan}
     # check consistency
     assert 2450 in rt_lookup
-    assert rt_lookup[2450]["rt"] == 1534.4619140625
+    assert rt_lookup[2450]["rt"] == pytest.approx(1534.4619140625)
     assert np.isnan(rt_lookup[2450]["precursor_mz"])
