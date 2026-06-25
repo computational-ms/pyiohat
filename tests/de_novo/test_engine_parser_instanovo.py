@@ -325,7 +325,7 @@ def test_map_multiple_mod_translations_instanovo():
     # 3. Carbamidomethylation at Cysteine (index 4)
     # The clean sequence should be: MACGKR
     parser.df.loc[0, "sequence"] = "[UNIMOD:1]-M[UNIMOD:35]ACG[UNIMOD:4]K"
-    
+
     df = parser.unify()
 
     # Get our processed row
@@ -341,6 +341,7 @@ def test_map_multiple_mod_translations_instanovo():
     assert "Acetyl:0" in mod_string
     assert "Oxidation:1" in mod_string
     assert "Carbamidomethyl:4" in mod_string
+
 
 # Tests for n-term and digits
 # def test_c_terminal_tmt():

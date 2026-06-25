@@ -23,6 +23,7 @@ def test_base_parser_read_rt_lookup_file():
     assert pytest.approx(rt_lookup[2450]["rt"]) == [1534.4619140625]
     assert pytest.approx(rt_lookup[2450]["precursor_mz"]) == [618.2697754]
 
+
 def test_engine_parsers_IdentBaseParser_init():
     input_file = (
         pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_xtandem_alanine.xml"

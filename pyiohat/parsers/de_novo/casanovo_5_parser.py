@@ -49,7 +49,7 @@ class Casanovo_5_Parser(DeNovoBaseParser):
             "start": "sequence_start",
             "end": "sequence_end",
             "opt_ms_run[1]_aa_scores": "casanovo:opt_ms_run[1]_aa_scores",
-            "opt_ms_run[1]_proforma": "casanovo:opt_ms_run[1]_proforma"
+            "opt_ms_run[1]_proforma": "casanovo:opt_ms_run[1]_proforma",
         }
         # pprint(f"mapping dict")
         # pprint(self.mapping_dict)
@@ -81,7 +81,9 @@ class Casanovo_5_Parser(DeNovoBaseParser):
         Returns:
             pd.DataFrame: cleaned dataframe
         """
-        skip = next(i for i, line in enumerate(open(filepath)) if line.startswith("PSH\t"))
+        skip = next(
+            i for i, line in enumerate(open(filepath)) if line.startswith("PSH\t")
+        )
         df = pd.read_csv(filepath, sep="\t", skiprows=skip, header=0)
         df = df.iloc[:, 1:]
         df = df.reset_index(drop=True)
@@ -129,19 +131,22 @@ class Casanovo_5_Parser(DeNovoBaseParser):
                                     f"name(s) {matched_names}; only using first match "
                                     f"'{matched_names[0]}'"
                                 )
-                                mod_strings.append(f"{matched_names[0]}:{position}")  # position 0 as placeholder
+                                mod_strings.append(
+                                    f"{matched_names[0]}:{position}"
+                                )  # position 0 as placeholder
 
                         except Exception as e:
                             print(
                                 f"Warning: mod_mapper lookup failed for mass {mass}: no UNIMOD match found"
                             )
                     else:
-                    # Fallback: keep raw entry so nothing is silently lost
+                        # Fallback: keep raw entry so nothing is silently lost
                         mod_strings.append(entry)
 
             parsed.append(";".join(mod_strings) if mod_strings else None)
 
         self.df["modifications"] = parsed
+
     def _extract_scan_number(self):
         """
         Extract scan number from spectra_ref column.

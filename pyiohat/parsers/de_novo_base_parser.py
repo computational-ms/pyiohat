@@ -312,134 +312,134 @@ class DeNovoBaseParser(BaseParser):
         self.df.loc[:, "mass_delta"] = self.df["exp_mass"] - self.df["ucalc_mass"]
 
     def get_meta_info(self):
-            """Extract meta information.
+        """Extract meta information.
 
-            Experimental mass-to-charge ratios, retention times, file names,
-            and spectrum titles are added.
-            Operations are performed inplace on self.df
-            """
-            rt_lookup = self._read_meta_info_lookup_file()
-            self.df["spectrum_id"] = self.df["spectrum_id"].astype(int)
+        Experimental mass-to-charge ratios, retention times, file names,
+        and spectrum titles are added.
+        Operations are performed inplace on self.df
+        """
+        rt_lookup = self._read_meta_info_lookup_file()
+        self.df["spectrum_id"] = self.df["spectrum_id"].astype(int)
 
-            if self.style in ("comet_style_1", "omssa_style_1", "casanovo_style_1"):
-                logger.warning(
-                    "This engine does not provide retention time information. Grouping only by Spectrum ID. This may cause problems when working with multi-file inputs."
-                )
-                for name, grp in self.df.groupby("spectrum_id"):
-                    if name not in rt_lookup:
-                        raise KeyError(
-                            f"Could not uniquely assign meta data to spectrum id {name}."
-                        )
-                    meta = rt_lookup[name]
-                    distinct_rts = set(meta["rt"])
-                    if len(distinct_rts) == 1:
-                        idx = 0
-                        self.df.loc[
-                            grp.index,
-                            ("raw_data_location", "exp_mz", "retention_time_seconds"),
-                        ] = [
-                            meta["lineage_root"][idx],
-                            meta["precursor_mz"][idx],
-                            meta["rt"][idx],
-                        ]
-                    else:
-                        raise KeyError(
-                            f"Could not uniquely assign meta data to spectrum id {name}."
-                        )
-
-            elif self.style == "instanovo_style_1":
-                logger.warning(
-                    "This engine does not provide retention time information. Grouping only by MS_Level. "
-                    "This may cause problems when working with multi-file inputs."
-                )
-
-                # Create a sorted list of actual IDs for all MS2 spectra to map 0-based indices
-                ms2_keys = sorted(
-                    [
-                        spec_id
-                        for spec_id, meta_dict in rt_lookup.items()
-                        if str(meta_dict.get("ms_level", [None])[0]) == "2"
-                    ]
-                )
-                final_scan_val = getattr(self, "last_index", None)
-                if final_scan_val is not None:
-                    if (final_scan_val + 1) != len(ms2_keys):
-                        raise KeyError(
-                            f"InstaNovo report contains {final_scan_val + 1} "
-                            f"entries, but raw file contains {len(ms2_keys)} MS2 spectra. Could not uniquely assign meta data. "
-                        )
-
-                for name, grp in self.df.groupby("spectrum_id"):
-                    # Convert the InstaNovo ID (0, 1, 2...) to an integer to use as list index
-                    idx = int(name)
-
-                    if idx < len(ms2_keys):
-                        true_spectrum_id = ms2_keys[idx]
-                        meta = rt_lookup[true_spectrum_id]
-                        distinct_rts = set(meta["rt"])
-                        if len(distinct_rts) != 1:
-                            raise KeyError(
-                                f"Could not uniquely assign meta data to spectrum id {true_spectrum_id}."
-                            )
-
-                        self.df.loc[
-                            grp.index,
-                            (
-                                "raw_data_location",
-                                "exp_mz",
-                                "retention_time_seconds",
-                                "spectrum_id",
-                            ),
-                        ] = [
-                            meta["lineage_root"][0],
-                            meta["precursor_mz"][0],
-                            meta["rt"][0],
-                            true_spectrum_id,
-                        ]
-                    else:
-                        raise KeyError(
-                            f"InstaNovo ID {idx} exceeds available MS2 spectra ({len(ms2_keys)})."
-                        )
-            else:
-                self.df["retention_time_seconds"] = self.df[
-                    "retention_time_seconds"
-                ].astype(float)
-                for name, grp in self.df.groupby(["spectrum_id", "retention_time_seconds"]):
-                    spec_id, group_rt = name
-                    if spec_id not in rt_lookup:
-                        raise KeyError(
-                            f"Could not uniquely assign meta data to spectrum id, retention time {name}."
-                        )
-                    meta = rt_lookup[spec_id]
-                    matches = [
-                        i
-                        for i, candidate_rt in enumerate(meta["rt"])
-                        if abs(group_rt - candidate_rt) <= 10**-self.rt_truncate_precision
-                    ]
-                    if len(matches) == 1:
-                        idx = matches[0]
-                        self.df.loc[
-                            grp.index,
-                            ("raw_data_location", "exp_mz", "retention_time_seconds"),
-                        ] = [
-                            meta["lineage_root"][idx],
-                            meta["precursor_mz"][idx],
-                            meta["rt"][idx],
-                        ]
-                    else:
-                        raise KeyError(
-                            f"Could not uniquely assign meta data to spectrum id, retention time {name}."
-                        )
-
-            self.df.loc[:, "spectrum_title"] = (
-                self.df["raw_data_location"].apply(lambda x: Path(x).stem)
-                + "."
-                + self.df["spectrum_id"].astype(str)
-                + "."
-                + self.df["spectrum_id"].astype(str)
-                + "."
-                + self.df["charge"].astype(str)
+        if self.style in ("comet_style_1", "omssa_style_1", "casanovo_style_1"):
+            logger.warning(
+                "This engine does not provide retention time information. Grouping only by Spectrum ID. This may cause problems when working with multi-file inputs."
             )
+            for name, grp in self.df.groupby("spectrum_id"):
+                if name not in rt_lookup:
+                    raise KeyError(
+                        f"Could not uniquely assign meta data to spectrum id {name}."
+                    )
+                meta = rt_lookup[name]
+                distinct_rts = set(meta["rt"])
+                if len(distinct_rts) == 1:
+                    idx = 0
+                    self.df.loc[
+                        grp.index,
+                        ("raw_data_location", "exp_mz", "retention_time_seconds"),
+                    ] = [
+                        meta["lineage_root"][idx],
+                        meta["precursor_mz"][idx],
+                        meta["rt"][idx],
+                    ]
+                else:
+                    raise KeyError(
+                        f"Could not uniquely assign meta data to spectrum id {name}."
+                    )
+
+        elif self.style == "instanovo_style_1":
+            logger.warning(
+                "This engine does not provide retention time information. Grouping only by MS_Level. "
+                "This may cause problems when working with multi-file inputs."
+            )
+
+            # Create a sorted list of actual IDs for all MS2 spectra to map 0-based indices
+            ms2_keys = sorted(
+                [
+                    spec_id
+                    for spec_id, meta_dict in rt_lookup.items()
+                    if str(meta_dict.get("ms_level", [None])[0]) == "2"
+                ]
+            )
+            final_scan_val = getattr(self, "last_index", None)
+            if final_scan_val is not None:
+                if (final_scan_val + 1) != len(ms2_keys):
+                    raise KeyError(
+                        f"InstaNovo report contains {final_scan_val + 1} "
+                        f"entries, but raw file contains {len(ms2_keys)} MS2 spectra. Could not uniquely assign meta data. "
+                    )
+
+            for name, grp in self.df.groupby("spectrum_id"):
+                # Convert the InstaNovo ID (0, 1, 2...) to an integer to use as list index
+                idx = int(name)
+
+                if idx < len(ms2_keys):
+                    true_spectrum_id = ms2_keys[idx]
+                    meta = rt_lookup[true_spectrum_id]
+                    distinct_rts = set(meta["rt"])
+                    if len(distinct_rts) != 1:
+                        raise KeyError(
+                            f"Could not uniquely assign meta data to spectrum id {true_spectrum_id}."
+                        )
+
+                    self.df.loc[
+                        grp.index,
+                        (
+                            "raw_data_location",
+                            "exp_mz",
+                            "retention_time_seconds",
+                            "spectrum_id",
+                        ),
+                    ] = [
+                        meta["lineage_root"][0],
+                        meta["precursor_mz"][0],
+                        meta["rt"][0],
+                        true_spectrum_id,
+                    ]
+                else:
+                    raise KeyError(
+                        f"InstaNovo ID {idx} exceeds available MS2 spectra ({len(ms2_keys)})."
+                    )
+        else:
+            self.df["retention_time_seconds"] = self.df[
+                "retention_time_seconds"
+            ].astype(float)
+            for name, grp in self.df.groupby(["spectrum_id", "retention_time_seconds"]):
+                spec_id, group_rt = name
+                if spec_id not in rt_lookup:
+                    raise KeyError(
+                        f"Could not uniquely assign meta data to spectrum id, retention time {name}."
+                    )
+                meta = rt_lookup[spec_id]
+                matches = [
+                    i
+                    for i, candidate_rt in enumerate(meta["rt"])
+                    if abs(group_rt - candidate_rt) <= 10**-self.rt_truncate_precision
+                ]
+                if len(matches) == 1:
+                    idx = matches[0]
+                    self.df.loc[
+                        grp.index,
+                        ("raw_data_location", "exp_mz", "retention_time_seconds"),
+                    ] = [
+                        meta["lineage_root"][idx],
+                        meta["precursor_mz"][idx],
+                        meta["rt"][idx],
+                    ]
+                else:
+                    raise KeyError(
+                        f"Could not uniquely assign meta data to spectrum id, retention time {name}."
+                    )
+
+        self.df.loc[:, "spectrum_title"] = (
+            self.df["raw_data_location"].apply(lambda x: Path(x).stem)
+            + "."
+            + self.df["spectrum_id"].astype(str)
+            + "."
+            + self.df["spectrum_id"].astype(str)
+            + "."
+            + self.df["charge"].astype(str)
+        )
 
     def add_ranks(self):
         """Ranks are calculated based on the engine scoring column at Spectrum ID level.

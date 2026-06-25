@@ -227,10 +227,10 @@ class Instanovo_1_Parser(DeNovoBaseParser):
             "precursor_charge",
             "experiment_name",
             "spectrum_id",
-            "predictions", 
-            "log_probs", 
+            "predictions",
+            "log_probs",
             "token_log_probs",
-            "predictions_tokenised", 
+            "predictions_tokenised",
             "delta_mass_ppm",
         }
         columns_match = (
