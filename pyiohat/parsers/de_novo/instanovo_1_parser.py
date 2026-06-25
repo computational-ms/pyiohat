@@ -33,27 +33,52 @@ class Instanovo_1_Parser(DeNovoBaseParser):
 
         # pprint(f"direct file read from msf out")
         # pprint(self.df)
-        self.mapping_dict = {
-            "scan_number": "spectrum_id",
-            "precursor_mz": "exp_mz",
-            "precursor_charge": "charge",
-            "experiment_name": "raw_data_location",
-            "spectrum_id": "spectrum_title",
-            "retention_time_seconds": "retention_time_seconds",
-            "diffusion_predictions_tokenised": "instanovo:diffusion_predictions_tokenised",
-            "diffusion_predictions": "instanovo:diffusion_predictions",
-            "diffusion_log_probabilities": "instanovo:diffusion_log_probabilities",
-            "transformer_predictions": "instanovo:transformer_predictions",
-            "transformer_predictions_tokenised": "instanovo:transformer_predictions_tokenised",
-            "transformer_log_probabilities": "instanovo:transformer_log_probabilities",
-            "transformer_token_log_probabilities": "instanovo:transformer_token_log_probabilities",
-            "final_prediction": "sequence",
-            "modifications": "modifications",
-            "final_prediction_tokenised": "instanovo:final_prediction_tokenised",
-            "final_log_probabilities": "instanovo:final_log_probabilities",
-            "selected_model": "instanovo:selected_model",
-            "precursor_mass_match": "instanovo:precursor_mass_match",
-        }
+        columns = set(self.df.columns.str.strip())
+
+        if "final_prediction" in columns:
+            seq_col_raw = "final_prediction"
+            self.mapping_dict = {
+                "scan_number": "spectrum_id",
+                "precursor_mz": "exp_mz",
+                "precursor_charge": "charge",
+                "experiment_name": "raw_data_location",
+                "spectrum_id": "spectrum_title",
+                "retention_time_seconds": "retention_time_seconds",
+                "diffusion_predictions_tokenised": "instanovo:diffusion_predictions_tokenised",
+                "diffusion_predictions": "instanovo:diffusion_predictions",
+                "diffusion_log_probabilities": "instanovo:diffusion_log_probabilities",
+                "transformer_predictions": "instanovo:transformer_predictions",
+                "transformer_predictions_tokenised": "instanovo:transformer_predictions_tokenised",
+                "transformer_log_probabilities": "instanovo:transformer_log_probabilities",
+                "transformer_token_log_probabilities": "instanovo:transformer_token_log_probabilities",
+                "final_prediction": "sequence",
+                "modifications": "modifications",
+                "final_prediction_tokenised": "instanovo:final_prediction_tokenised",
+                "final_log_probabilities": "instanovo:final_log_probabilities",
+                "selected_model": "instanovo:selected_model",
+                "precursor_mass_match": "instanovo:precursor_mass_match",
+            }
+        elif "predictions" in columns:
+            seq_col_raw = "predictions"
+            self.mapping_dict = {
+                "scan_number": "spectrum_id",
+                "precursor_mz": "exp_mz",
+                "precursor_charge": "charge",
+                "experiment_name": "raw_data_location",
+                "spectrum_id": "spectrum_title",
+                "retention_time_seconds": "retention_time_seconds",
+                "predictions": "sequence",
+                "modifications": "modifications",
+                "predictions_tokenised": "instanovo:final_prediction_tokenised",
+                "log_probs": "instanovo:transformer_log_probabilities",
+                "token_log_probs": "instanovo:transformer_token_log_probabilities",
+                "delta_mass_ppm": "instanovo:precursor_mass_match",
+            }
+        else:
+            raise ValueError(
+                f"Cannot determine sequence column from InstaNovo CSV headers. "
+                f"Expected 'final_prediction' or 'predictions', got: {sorted(columns)}"
+            )
         # pprint(f"mapping dict")
         # pprint(self.mapping_dict)
         self.df.rename(columns=self.mapping_dict, inplace=True)
@@ -114,6 +139,16 @@ class Instanovo_1_Parser(DeNovoBaseParser):
                     )
                 )
 
+                prefix_clean = re.sub(
+                    r"\[([A-Za-z]+[A-Za-z0-9:.\-()]+)\]", "", seq[: match.start()]
+                )
+                prefix_clean = prefix_clean.strip("-")
+
+                position = len(prefix_clean)
+
+                if match.start() == 0:
+                    position = 0
+
                 # Look up unimod modifications by ID
                 # Try to resolve mod_name as a unimod ID to get canonical name(s)
                 try:
@@ -136,7 +171,7 @@ class Instanovo_1_Parser(DeNovoBaseParser):
 
             # Remove all modification brackets from sequence
             cleaned_seq = re.sub(r"\[[^\]]+\]", "", seq)
-            cleaned_seq = cleaned_seq.lstrip("-")
+            cleaned_seq = cleaned_seq.strip("-")
             cleaned_sequences.append(cleaned_seq)
 
         # Add Mass Difference column (insert after sequence column)
@@ -167,7 +202,7 @@ class Instanovo_1_Parser(DeNovoBaseParser):
         head_raw = head.rstrip("\n")
         delimiter = "\t" if "\t" in head_raw else ","
         head = set(head_raw.split(delimiter))
-        ref_columns = {
+        ref_columns_both_models = {
             "scan_number",
             "precursor_mz",
             "precursor_charge",
@@ -186,7 +221,22 @@ class Instanovo_1_Parser(DeNovoBaseParser):
             "selected_model",
             "precursor_mass_match",
         }
-        columns_match = len(ref_columns.difference(head)) == 0
+        ref_columns_one_model = {
+            "scan_number",
+            "precursor_mz",
+            "precursor_charge",
+            "experiment_name",
+            "spectrum_id",
+            "predictions", 
+            "log_probs", 
+            "token_log_probs",
+            "predictions_tokenised", 
+            "delta_mass_ppm",
+        }
+        columns_match = (
+            len(ref_columns_both_models.difference(head)) == 0
+            or len(ref_columns_one_model.difference(head)) == 0
+        )
         return is_instanovo_csv and columns_match
 
     def unify(self):

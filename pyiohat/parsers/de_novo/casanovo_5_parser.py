@@ -49,6 +49,7 @@ class Casanovo_5_Parser(DeNovoBaseParser):
             "start": "sequence_start",
             "end": "sequence_end",
             "opt_ms_run[1]_aa_scores": "casanovo:opt_ms_run[1]_aa_scores",
+            "opt_ms_run[1]_proforma": "casanovo:opt_ms_run[1]_proforma"
         }
         # pprint(f"mapping dict")
         # pprint(self.mapping_dict)
@@ -72,7 +73,7 @@ class Casanovo_5_Parser(DeNovoBaseParser):
 
     def _read_and_clean_mztab(self, filepath):
         """
-        Read mzTab file and remove first 65 rows and first column.
+        Read mzTab file and get rid of rows that are not needed by pyiohat.
 
         Args:
              filepath (str or Path): path to mzTab file
@@ -80,101 +81,67 @@ class Casanovo_5_Parser(DeNovoBaseParser):
         Returns:
             pd.DataFrame: cleaned dataframe
         """
-        # Read the file, skipping the first 65 rows, and use row 66 as header
-        df = pd.read_csv(filepath, sep="\t", skiprows=65, header=0)
-
-        # Delete the first column
+        skip = next(i for i, line in enumerate(open(filepath)) if line.startswith("PSH\t"))
+        df = pd.read_csv(filepath, sep="\t", skiprows=skip, header=0)
         df = df.iloc[:, 1:]
-
-        # Reset the index
         df = df.reset_index(drop=True)
-
         return df
 
     def parse_sequence_modifications(self):
         """
-        Parse sequence column to extract mass difference and modifications.
+        Parse the mzTab modifications column into pyiohat format.
+        mzTab format: '3-Carbamidomethyl (C):UNIMOD:4' or multiple separated by '|'
+        pyiohat format: 'Carbamidomethyl:3;Oxidation:6'
         """
-        seq_col = "sequence"
-
-        if seq_col not in self.df.columns:
-            raise KeyError(
-                f"Column '{seq_col}' not found in DataFrame. Available columns: {list(self.df.columns)}"
-            )
-
-        seq_col_index = self.df.columns.get_loc(seq_col)
-
-        # Initialize modifications and mass difference column if it doesn't exist
         if "modifications" not in self.df.columns:
             self.df["modifications"] = None
+            return
 
-        # Initialize lists for new data
-        mass_differences = []
-        modifications_list = []
-        cleaned_sequences = []
-
-        # Process ALL rows (starting from 0, not 1)
-        for idx in range(len(self.df)):
-            seq = self.df.iloc[idx, seq_col_index]
-
-            if pd.isna(seq):
-                mass_differences.append(None)
-                modifications_list.append(None)
-                cleaned_sequences.append(seq)
+        parsed = []
+        for raw in self.df["modifications"]:
+            if pd.isna(raw) or raw == "null" or raw == "":
+                parsed.append(None)
                 continue
 
-            seq = str(seq)
+            mod_strings = []
+            # mzTab can have multiple mods separated by '|'
+            for entry in str(raw).split(";"):
+                entry = entry.strip()
+                # Format: '{position}-{mod_name} ({aa}):UNIMOD:{id}'
+                # e.g. '3-Carbamidomethyl (C):UNIMOD:4'
+                match = re.match(r"^(\d+)-([^:]+?)(?:\s*\([^)]+\))?:UNIMOD:\d+$", entry)
+                if match:
+                    position = match.group(1)
+                    mod_name = match.group(2).strip()
+                    mod_strings.append(f"{mod_name}:{position}")
+                else:
+                    mass_match = re.match(r"^(\d+)-\[([+-]?\d+\.?\d*)\]$", entry)
+                    if mass_match:
+                        position = mass_match.group(1)
+                        mass = mass_match.group(2)
+                        try:
+                            matched_names = self.mod_mapper.mass_to_names(
+                                float(mass), decimals=4
+                            )
+                            if len(matched_names) > 0:
+                                print(
+                                    f"Warning: mass {mass} matched {len(matched_names)} "
+                                    f"name(s) {matched_names}; only using first match "
+                                    f"'{matched_names[0]}'"
+                                )
+                                mod_strings.append(f"{matched_names[0]}:{position}")  # position 0 as placeholder
 
-            # Extract mass difference [+25.980265] or [-15.123456]
-            mass_diff_match = re.search(r"\[([+-]?\d+\.?\d*)\]", seq)
-            mass_diff_mods = []
-            if mass_diff_match:
-                mass_diff = mass_diff_match.group(1)
-                mass_differences.append(mass_diff)
-                seq = re.sub(r"\[([+-]?\d+\.?\d*)\]", "", seq)
-                try:
-                    matched_names = self.mod_mapper.mass_to_names(
-                        float(mass_diff), decimals=4
-                    )
-                    for name in matched_names:
-                        mass_diff_mods.append(f"{name}:0")  # position 0 as placeholder
-                except Exception as e:
-                    print(
-                        f"Warning: mod_mapper lookup failed for mass {mass_diff}: {e}"
-                    )
-            else:
-                mass_differences.append(None)
+                        except Exception as e:
+                            print(
+                                f"Warning: mod_mapper lookup failed for mass {mass}: no UNIMOD match found"
+                            )
+                    else:
+                    # Fallback: keep raw entry so nothing is silently lost
+                        mod_strings.append(entry)
 
-            # Extract all modifications like [Carbamidomethyl] #Change regex to cover more uminod stuff
-            mod_pattern = r"\[([A-Za-z]+[A-Za-z0-9:.\-()]+)\]"
-            modifications = []
+            parsed.append(";".join(mod_strings) if mod_strings else None)
 
-            for match in re.finditer(mod_pattern, seq):
-                mod_name = match.group(1)
-                position = len(
-                    re.sub(
-                        r"\[([A-Za-z]+[A-Za-z0-9:.\-()]+)\]", "", seq[: match.start()]
-                    )
-                )
-                modifications.append(f"{mod_name}:{position}")
-            all_modifications = mass_diff_mods + modifications
-
-            if all_modifications:
-                modifications_list.append(";".join(all_modifications))
-            else:
-                modifications_list.append(None)
-
-            # Remove all modification brackets from sequence
-            cleaned_seq = re.sub(r"\[[^\]]+\]", "", seq)
-            cleaned_seq = cleaned_seq.lstrip("-")
-            cleaned_sequences.append(cleaned_seq)
-
-        # Add Mass Difference column (insert after sequence column)
-
-        # Update modifications and sequence columns
-        self.df["modifications"] = modifications_list
-        self.df[seq_col] = cleaned_sequences
-
+        self.df["modifications"] = parsed
     def _extract_scan_number(self):
         """
         Extract scan number from spectra_ref column.
@@ -229,14 +196,7 @@ class Casanovo_5_Parser(DeNovoBaseParser):
         is_mztab = file.as_posix().endswith(".mztab")
 
         with open(file.as_posix()) as f:
-            try:
-                # Skip first 65 rows to get to the header row (row 66)
-                for _ in range(65):
-                    next(f)
-                # Now read the header row (row 66)
-                head = next(f)
-            except StopIteration:
-                head = ""
+            head = next((line for line in f if line.startswith("PSH\t")), "")
 
         head = set(head.rstrip("\n").split("\t"))
         ref_columns = {
@@ -260,6 +220,7 @@ class Casanovo_5_Parser(DeNovoBaseParser):
             "start",
             "end",
             "opt_ms_run[1]_aa_scores",
+            "opt_ms_run[1]_proforma",
         }
         columns_match = len(ref_columns.difference(head)) == 0
         return is_mztab and columns_match

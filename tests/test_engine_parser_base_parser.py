@@ -23,9 +23,18 @@ def test_base_parser_read_rt_lookup_file_wo_precursor_mz_info():
     bp = BaseParser(input_file, params={"rt_pickle_name": rt_lookup_path})
     rt_lookup = bp._read_meta_info_lookup_file()
     assert len(rt_lookup) == 9
-    precursor_mzs = [specs["precursor_mz"] for specs in rt_lookup.values()]
-    assert set(precursor_mzs) == {np.nan}
+    flat_precursor_mzs = [
+        mz for specs in rt_lookup.values() for mz in specs["precursor_mz"]
+    ]
+    # 2. Use np.isnan() since np.nan == np.nan evaluates to False in Python
+    assert all(np.isnan(mz) for mz in flat_precursor_mzs)
     # check consistency
     assert 2450 in rt_lookup
-    assert rt_lookup[2450]["rt"] == pytest.approx(1534.4619140625)
+    assert rt_lookup[2450]["rt"][0] == pytest.approx(1534.4619140625)
     assert np.isnan(rt_lookup[2450]["precursor_mz"])
+    rt_index = rt_lookup[2450]["rt"].index(1534.4619140625)
+    assert rt_lookup[2450]["lineage_root"][rt_index] == "path/for/glory.mzML"
+    # 1. Find the position (index) of this specific retention time
+    rt_index = rt_lookup[2450]["rt"].index(1534.4619140625)
+    # 2. Verify that the precursor m/z at the exact same position is NaN
+    assert rt_lookup[2450]["precursor_mz"][rt_index] is np.nan

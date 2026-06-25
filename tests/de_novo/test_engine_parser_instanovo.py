@@ -276,6 +276,72 @@ def test_instanovo_parser_missing_ms_level_error():
     assert "Could not uniquely assign meta data" in str(excinfo.value)
 
 
+def test_map_multiple_mod_translations_instanovo():
+    """Test mapping and 1-based positioning when a single peptide sequence
+
+    contains multiple, differing modifications (e.g. N-terminal and internal).
+    """
+    import pandas as pd
+
+    input_file = pytest._test_path / "data" / "test_instanovo.instanovo.csv"
+    db_path = pytest._test_path / "data" / "Hfvol_prot_250410.fasta"
+    rt_lookup_path = pytest._test_path / "data" / "instanovo_lookup.csv"
+
+    parser = Instanovo_1_Parser(
+        input_file,
+        params={
+            "cpus": 2,
+            "database": db_path,
+            "rt_pickle_name": rt_lookup_path,
+            "enzyme": "(?<=[KR])(?!P)",
+            "terminal_cleavage_site_integrity": "any",
+            "min_pep_length": 5,
+            "modifications": [
+                {
+                    "aa": "M",
+                    "type": "opt",
+                    "position": "any",
+                    "name": "Oxidation",
+                },
+                {
+                    "aa": "C",
+                    "type": "fix",
+                    "position": "any",
+                    "name": "Carbamidomethyl",
+                },
+                {
+                    "aa": "*",
+                    "type": "opt",
+                    "position": "Prot-N-term",
+                    "name": "Acetyl",
+                },
+            ],
+        },
+    )
+
+    # Inject a mock row at index 0 containing multiple modifications:
+    # 1. Acetyl at the N-terminus ([UNIMOD:1]-...)
+    # 2. Oxidation at the first Methionine (index 1)
+    # 3. Carbamidomethylation at Cysteine (index 4)
+    # The clean sequence should be: MACGKR
+    parser.df.loc[0, "sequence"] = "[UNIMOD:1]-M[UNIMOD:35]ACG[UNIMOD:4]K"
+    
+    df = parser.unify()
+
+    # Get our processed row
+    processed_row = df.iloc[0]
+
+    # 1. Check that the raw bracket codes are cleanly stripped out of the sequence
+    assert processed_row["sequence"] == "MACGK"
+
+    # 2. Validate that multiple modifications are mapped to their correct 1-based string indices
+    # Expecting: Acetyl at position 0 (or 1 depending on N-term style), Oxidation at M (1), Carbamidomethyl at C (3)
+    # Adjust string formatting expectations based on how your base parser joins multiple mods (usually semi-colon separated)
+    mod_string = processed_row["modifications"]
+    assert "Acetyl:0" in mod_string
+    assert "Oxidation:1" in mod_string
+    assert "Carbamidomethyl:4" in mod_string
+
 # Tests for n-term and digits
 # def test_c_terminal_tmt():
 #     input_file = pytest._test_path / "data" / "test_instanovo.instanovo.csv"

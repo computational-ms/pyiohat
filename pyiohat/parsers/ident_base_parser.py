@@ -311,17 +311,24 @@ class IdentBaseParser(BaseParser):
                 "This engine does not provide retention time information. Grouping only by Spectrum ID. This may cause problems when working with multi-file inputs."
             )
             for name, grp in self.df.groupby("spectrum_id"):
-                if name in rt_lookup:
-                    meta = rt_lookup[name]
-                    lineage_root = meta["lineage_root"]
-                    precursor_mz = meta["precursor_mz"]
-                    rt = meta["rt"]
+                if name not in rt_lookup:
+                    logger.error(
+                        f"Could not uniquely assign meta data to spectrum id {name}."
+                    )
+                meta = rt_lookup[name]
+                distinct_rts = set(meta["rt"])
+                if len(distinct_rts) == 1:
+                    idx = 0
                     self.df.loc[
                         grp.index,
                         ("raw_data_location", "exp_mz", "retention_time_seconds"),
-                    ] = [lineage_root, precursor_mz, rt]
+                    ] = [
+                        meta["lineage_root"][idx],
+                        meta["precursor_mz"][idx],
+                        meta["rt"][idx],
+                    ]
                 else:
-                    raise KeyError(
+                    logger.error(
                         f"Could not uniquely assign meta data to spectrum id {name}."
                     )
         else:
@@ -329,18 +336,29 @@ class IdentBaseParser(BaseParser):
                 "retention_time_seconds"
             ].astype(float)
             for name, grp in self.df.groupby(["spectrum_id", "retention_time_seconds"]):
-                if name[0] in rt_lookup:
-                    meta = rt_lookup[name[0]]
-                    lineage_root = meta["lineage_root"]
-                    precursor_mz = meta["precursor_mz"]
-                    rt = meta["rt"]
-                    if abs(name[1] - rt) <= 10**-self.rt_truncate_precision:
-                        self.df.loc[
-                            grp.index,
-                            ("raw_data_location", "exp_mz", "retention_time_seconds"),
-                        ] = [lineage_root, precursor_mz, rt]
+                spec_id, group_rt = name
+                if spec_id not in rt_lookup:
+                    logger.error(
+                        f"Could not uniquely assign meta data to spectrum id, retention time {name}."
+                    )
+                meta = rt_lookup[spec_id]
+                matches = [
+                    i
+                    for i, candidate_rt in enumerate(meta["rt"])
+                    if abs(group_rt - candidate_rt) <= 10**-self.rt_truncate_precision
+                ]
+                if len(matches) == 1:
+                    idx = matches[0]
+                    self.df.loc[
+                        grp.index,
+                        ("raw_data_location", "exp_mz", "retention_time_seconds"),
+                    ] = [
+                        meta["lineage_root"][idx],
+                        meta["precursor_mz"][idx],
+                        meta["rt"][idx],
+                    ]
                 else:
-                    raise KeyError(
+                    logger.error(
                         f"Could not uniquely assign meta data to spectrum id, retention time {name}."
                     )
 

@@ -17,11 +17,11 @@ def test_base_parser_read_rt_lookup_file():
     bp = DeNovoBaseParser(input_file, params={"rt_pickle_name": rt_lookup_path})
     rt_lookup = bp._read_meta_info_lookup_file()
     assert len(rt_lookup) == 1120
-    precursor_mzs = [specs["precursor_mz"] for specs in rt_lookup.values()]
+    precursor_mzs = [mz for specs in rt_lookup.values() for mz in specs["precursor_mz"]]
     assert pytest.approx(sum(precursor_mzs) / len(precursor_mzs)) == 550.8444810049874
-    assert rt_lookup[2450]["lineage_root"] == "path/for/glory.mzML"
-    assert pytest.approx(rt_lookup[2450]["rt"]) == 1534.4619140625
-    assert pytest.approx(rt_lookup[2450]["precursor_mz"]) == 618.2697754
+    assert rt_lookup[2450]["lineage_root"] == ["path/for/glory.mzML"]
+    assert pytest.approx(rt_lookup[2450]["rt"]) == [1534.4619140625]
+    assert pytest.approx(rt_lookup[2450]["precursor_mz"]) == [618.2697754]
 
 
 def test_engine_parsers_DeNovoBaseParser_init():

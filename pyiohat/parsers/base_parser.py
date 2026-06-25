@@ -80,18 +80,23 @@ class BaseParser:
                 rt = float(row["rt"])
                 if row["rt_unit"] == "minute" or row["rt_unit"] == "min":
                     rt *= 60.0
-                if int(row["spectrum_id"]) not in rt_lookup:
-                    rt_lookup[int(row["spectrum_id"])] = {}
                 if row["precursor_mz"] == "":
                     precursor_mz = np.nan
                 else:
                     precursor_mz = float(row["precursor_mz"])
-                rt_lookup[int(row["spectrum_id"])] = {
-                    "lineage_root": row["lineage_root"],
-                    "precursor_mz": precursor_mz,
-                    "rt": rt,
-                    "ms_level": ms_level,
-                }
+                spec_id = int(row["spectrum_id"])
+                if spec_id not in rt_lookup:
+                    rt_lookup[spec_id] = {
+                        "lineage_root": [row["lineage_root"]],
+                        "precursor_mz": [precursor_mz],
+                        "rt": [rt],
+                        "ms_level": [ms_level],
+                    }
+                else:
+                    rt_lookup[spec_id]["lineage_root"].append(row["lineage_root"])
+                    rt_lookup[spec_id]["precursor_mz"].append(precursor_mz)
+                    rt_lookup[spec_id]["rt"].append(rt)
+                    rt_lookup[spec_id]["ms_level"].append(ms_level)
         return rt_lookup
 
     def sanitize(self):
