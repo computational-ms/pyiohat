@@ -278,6 +278,55 @@ def test_map_mod_translation_casanovo_mass_shift_no_mass_to_name():
     assert df["sequence"].iloc[0] == "LMDKPEQLR"
 
 
+def test_map_mod_translation_casanovo_multiple_mass_shifts():
+    """Multiple mass-shift modifications (no UNIMOD names) that cannot be resolved
+    should result in an empty modifications column.
+    """
+    import pandas as pd
+
+    input_file = pytest._test_path / "data" / "test_casanovo.mztab"
+    db_path = pytest._test_path / "data" / "Hfvol_prot_250410.fasta"
+    rt_lookup_path = pytest._test_path / "data" / "casanovo_lookup.csv"
+
+    parser = Casanovo_5_Parser(
+        input_file,
+        params={
+            "cpus": 2,
+            "database": db_path,
+            "rt_pickle_name": rt_lookup_path,
+            "enzyme": "(?<=[KR])(?!P)",
+            "terminal_cleavage_site_integrity": "any",
+            "modifications": [
+                {
+                    "aa": "M",
+                    "type": "opt",
+                    "position": "any",
+                    "name": "Oxidation",
+                },
+            ],
+        },
+    )
+
+    parser.df = pd.DataFrame(
+        {
+            "sequence": ["LMDKPEQLR"],
+            "modifications": ["0-[+25.980265];3-[+18.010565]"],
+            "spectrum_id": ["ms_run[1]:controllerType=0 controllerNumber=1 scan=4266"],
+            "charge": [2],
+            "casanovo:search_engine_score[1]": [0.98],
+            "protein_id": [None],
+            "exp_mz": [578.295],
+            "retention_time_seconds": [214.10],
+        }
+    )
+    df = parser.unify()
+
+    # When multiple mass shifts cannot be resolved, modifications column should be empty
+    assert not df["modifications"].iloc[0] or pd.isna(df["modifications"].iloc[0])
+
+    assert df["sequence"].iloc[0] == "LMDKPEQLR"
+
+
 # Tests for n-term and digits
 # def test_c_terminal_tmt():
 #     input_file = pytest._test_path / "data" / "test_casanovo.mztab"
