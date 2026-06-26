@@ -121,6 +121,7 @@ def test_engine_parsers_casanovo_check_dataframe_integrity():
         == df["sequence"].str.count("C")
     ).all()
     assert df["modifications"].str.count(":").sum() == 105
+    assert (df["raw_data_location"] == "path/for/glory.mzML").all()
 
 
 def test_map_mod_translation_casanovo():
@@ -148,7 +149,10 @@ def test_map_mod_translation_casanovo():
             ],
         },
     )
-
+    # Manual injection of a dataframe to test specific mapping logic.
+    # NOTE: the new parser reads modifications from a separate mzTab-style
+    # "modifications" column (e.g. "2-Oxidation (M):UNIMOD:35"), not from
+    # bracket notation embedded directly in the sequence string.
     parser.df = pd.DataFrame(
         {
             "sequence": ["LMDKPEQLR"],
@@ -162,7 +166,7 @@ def test_map_mod_translation_casanovo():
         }
     )
     df = parser.unify()
-
+    # Resolved name should carry the same position the mass-shift entry specified.
     assert df["modifications"].iloc[0] == "Oxidation:2"
     assert df["sequence"].iloc[0] == "LMDKPEQLR"
 
@@ -215,7 +219,7 @@ def test_map_mod_translation_casanovo_mass_shift():
     assert df["sequence"].iloc[0] == "LMDKPEQLR"
 
 
-def test_map_mod_translation_casanovo_mass_shift_no_mass_to_name():
+def test_map_mod_translation_casanovo_mass_shift_no_mass_to_name(capsys):
     """Mass-only modification (no UNIMOD name in mzTab) should resolve via
     mod_mapper.mass_to_names(), leaving nothing but the mass delta if unresolved.
     """
@@ -256,10 +260,17 @@ def test_map_mod_translation_casanovo_mass_shift_no_mass_to_name():
             "retention_time_seconds": [214.10],
         }
     )
+    capsys.readouterr()
     df = parser.unify()
 
+    # Check that warning that mass to names was unsuccessful is dusplayed.
+    captured = capsys.readouterr()
+    assert "Warning" in captured.out
+    assert "25.980265" in captured.out
+    assert "no UNIMOD match found" in captured.out
+    # Modifications column should be empty.
     assert not df["modifications"].iloc[0] or pd.isna(df["modifications"].iloc[0])
-
+    # Verify that mass_delta is strictly between 25 and 28
     assert 25 < df["mass_delta"].iloc[0] < 28
 
     assert df["sequence"].iloc[0] == "LMDKPEQLR"
@@ -307,7 +318,7 @@ def test_map_mod_translation_casanovo_multiple_mass_shifts():
         }
     )
     df = parser.unify()
-
+    # When multiple mass shifts cannot be resolved, modifications column should be empty
     assert not df["modifications"].iloc[0] or pd.isna(df["modifications"].iloc[0])
 
     assert df["sequence"].iloc[0] == "LMDKPEQLR"

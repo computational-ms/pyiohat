@@ -100,8 +100,11 @@ class Casanovo_5_Parser(DeNovoBaseParser):
                 continue
 
             mod_strings = []
+            # mzTab can have multiple mods separated by '|'
             for entry in str(raw).split(";"):
                 entry = entry.strip()
+                # Format: '{position}-{mod_name} ({aa}):UNIMOD:{id}'
+                # e.g. '3-Carbamidomethyl (C):UNIMOD:4'
                 match = re.match(r"^(\d+)-([^:]+?)(?:\s*\([^)]+\))?:UNIMOD:\d+$", entry)
                 if match:
                     position = match.group(1)
@@ -125,12 +128,18 @@ class Casanovo_5_Parser(DeNovoBaseParser):
                                 mod_strings.append(
                                     f"{matched_names[0]}:{position}"
                                 )  # position 0 as placeholder
+                            else:
+                                print(
+                                    f"Warning: mod_mapper lookup failed for mass {mass}: no UNIMOD match found"
+                                )
 
                         except Exception as e:
                             print(
-                                f"Warning: mod_mapper lookup failed for mass {mass}: no UNIMOD match found"
+                                f"Warning: mod_mapper lookup failed for mass {mass}: {e}"
                             )
+
                     else:
+                        # Fallback: keep raw entry so nothing is silently lost
                         mod_strings.append(entry)
 
             parsed.append(";".join(mod_strings) if mod_strings else None)
@@ -145,6 +154,7 @@ class Casanovo_5_Parser(DeNovoBaseParser):
         to just '2096'
         """
         if "spectrum_id" in self.df.columns:
+            # Extract scan number from the format: scan=XXXX
             self.df["spectrum_id"] = self.df["spectrum_id"].str.extract(r"scan=(\d+)")[
                 0
             ]

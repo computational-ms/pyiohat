@@ -95,6 +95,7 @@ class Instanovo_1_Parser(DeNovoBaseParser):
         """
         seq_col = "sequence"
 
+        # Initialize modifications and mass difference column if it doesn't exist
         if seq_col not in self.df.columns:
             raise KeyError(
                 f"Column '{seq_col}' not found in DataFrame. Available columns: {list(self.df.columns)}"
@@ -104,7 +105,7 @@ class Instanovo_1_Parser(DeNovoBaseParser):
 
         if "modifications" not in self.df.columns:
             self.df["modifications"] = None
-
+        # Initialize lists for new data
         modifications_list = []
         cleaned_sequences = []
 
@@ -145,14 +146,17 @@ class Instanovo_1_Parser(DeNovoBaseParser):
                 try:
                     unimod_id_str = mod_name.split(":")[-1]
                     matched_names = self.mod_mapper.id_to_name(unimod_id_str)
-                    if matched_names:
-                        modifications.append(f"{matched_names[0]}:{position}")
-                    else:
-                        # Fallback if the mapper returned an empty list
-                        raise KeyError(f"Unable to map {matched_names[0]}:{position}'.")
                 except Exception as e:
                     logger.info(
                         f"DEBUG: Exception during mod lookup for '{mod_name}': {e}"
+                    )
+                if matched_names:
+                    modifications.append(f"{matched_names[0]}:{position}")
+                else:
+                    # Fallback if the mapper returned an empty list
+                    raise KeyError(
+                        f"Unable to map modification '{mod_name}' at position {position}: "
+                        f"mod_mapper returned an empty list."
                     )
 
             if modifications:

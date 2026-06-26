@@ -246,7 +246,7 @@ def test_map_mod_translation_instanovo():
             ],
         },
     )
-
+    # Manual injection of a dataframe to test specific mapping logic
     parser.df.loc[5, "sequence"] = "M[UNIMOD:35]FEKKFK"
     df = parser.unify()
 
@@ -317,16 +317,55 @@ def test_map_multiple_mod_translations_instanovo():
             ],
         },
     )
-
+    # Inject a mock row at index 0 containing multiple modifications:
     parser.df.loc[0, "sequence"] = "[UNIMOD:1]-M[UNIMOD:35]ACG[UNIMOD:4]K"
 
     df = parser.unify()
-
+    # Get the processed row
     processed_row = df.iloc[0]
-
+    # Check that the raw bracket codes are cleanly stripped out of the sequence
     assert processed_row["sequence"] == "MACGK"
-
+    # Validate that multiple modifications are mapped to their correct 1-based string indices
     mod_string = processed_row["modifications"]
     assert "Acetyl:0" in mod_string
     assert "Oxidation:1" in mod_string
     assert "Carbamidomethyl:4" in mod_string
+
+
+def test_instanovo_parser_mod_mapper_empty_list_raises_keyerror():
+    """If mod_mapper.id_to_name() returns an empty list (lookup succeeded but
+    found no matching name), parse_sequence_modifications should raise KeyError
+    rather than silently dropping the modification.
+    """
+    from unittest.mock import patch
+    import pandas as pd
+
+    input_file = pytest._test_path / "data" / "test_instanovo.instanovo.csv"
+    db_path = pytest._test_path / "data" / "Hfvol_prot_250410.fasta"
+    rt_lookup_path = pytest._test_path / "data" / "instanovo_lookup.csv"
+
+    parser = Instanovo_1_Parser(
+        input_file,
+        params={
+            "cpus": 2,
+            "database": db_path,
+            "rt_pickle_name": rt_lookup_path,
+            "enzyme": "(?<=[KR])(?!P)",
+            "terminal_cleavage_site_integrity": "any",
+            "min_pep_length": 5,
+            "modifications": [
+                {
+                    "aa": "M",
+                    "type": "opt",
+                    "position": "any",
+                    "name": "Oxidation",
+                },
+            ],
+        },
+    )
+
+    parser.df.loc[0, "sequence"] = "M[UNIMOD:35]FEKKFK"
+
+    with patch.object(parser.mod_mapper, "id_to_name", return_value=[]):
+        with pytest.raises(KeyError, match="Unable to map"):
+            parser.parse_sequence_modifications()
