@@ -27,8 +27,6 @@ class Casanovo_5_Parser(DeNovoBaseParser):
         self.df = self._read_and_clean_mztab(self.input_file)
         self.df.dropna(axis=1, how="all", inplace=True)
 
-        # pprint(f"direct file read from msf out")
-        # pprint(self.df)
         self.mapping_dict = {
             "sequence": "sequence",
             "PSM_ID": "casanovo:PSM_ID",
@@ -51,14 +49,10 @@ class Casanovo_5_Parser(DeNovoBaseParser):
             "opt_ms_run[1]_aa_scores": "casanovo:opt_ms_run[1]_aa_scores",
             "opt_ms_run[1]_proforma": "casanovo:opt_ms_run[1]_proforma",
         }
-        # pprint(f"mapping dict")
-        # pprint(self.mapping_dict)
         self.df.rename(columns=self.mapping_dict, inplace=True)
 
         if "retention_time_seconds" not in self.df.columns:
             self.df["retention_time_seconds"] = None
-        # pprint(f"renamed df")
-        # pprint(self.df)
         self.df.columns = self.df.columns.str.lstrip(" ")
         if not "modifications" in self.df.columns:
             self.df["modifications"] = ""
@@ -106,11 +100,8 @@ class Casanovo_5_Parser(DeNovoBaseParser):
                 continue
 
             mod_strings = []
-            # mzTab can have multiple mods separated by '|'
             for entry in str(raw).split(";"):
                 entry = entry.strip()
-                # Format: '{position}-{mod_name} ({aa}):UNIMOD:{id}'
-                # e.g. '3-Carbamidomethyl (C):UNIMOD:4'
                 match = re.match(r"^(\d+)-([^:]+?)(?:\s*\([^)]+\))?:UNIMOD:\d+$", entry)
                 if match:
                     position = match.group(1)
@@ -140,7 +131,6 @@ class Casanovo_5_Parser(DeNovoBaseParser):
                                 f"Warning: mod_mapper lookup failed for mass {mass}: no UNIMOD match found"
                             )
                     else:
-                        # Fallback: keep raw entry so nothing is silently lost
                         mod_strings.append(entry)
 
             parsed.append(";".join(mod_strings) if mod_strings else None)
@@ -155,37 +145,9 @@ class Casanovo_5_Parser(DeNovoBaseParser):
         to just '2096'
         """
         if "spectrum_id" in self.df.columns:
-            # Extract scan number from the format: scan=XXXX
             self.df["spectrum_id"] = self.df["spectrum_id"].str.extract(r"scan=(\d+)")[
                 0
             ]
-
-        # def _save_to_csv(self, filepath):
-        """
-        Save the processed DataFrame to a CSV file.
-
-        Args:
-            filepath (str or Path): original mzTab file path
-
-        Returns:
-            str: path to the saved CSV file
-        """
-        # Convert Path object to string if necessary
-
-    #    filepath_str = str(filepath)
-
-    # Create output filename by replacing .mzTab or .tsv with .csv
-    #   if filepath_str.endswith(".mzTab"):
-    #      output_path = filepath_str.replace(".mzTab", "_processed.csv")
-    # else:
-    #    output_path = filepath_str + ".csv"
-
-    # Save DataFrame to CSV
-    # self.df.to_csv(output_path, index=False)
-
-    # logger.info(f"Processed data saved to: {output_path}")
-
-    # return output_path
 
     @classmethod
     def check_parser_compatibility(cls, file):
@@ -239,26 +201,10 @@ class Casanovo_5_Parser(DeNovoBaseParser):
         """
         self.df["search_engine"] = "casanovo_5_0"
 
-        # Parse sequence modifications before column renaming
-        # get the raw data location
-        # raw_data_file_name = Path(self.input_file).name.replace(".casanovo.mztab", "") #check naming conventions of pyiohat compared to raw files
-        # # Remove the Casanovo WID prefix to get the base file name
-        # raw_data_file_name = "_".join(raw_data_file_name.split("_")[4:])
-        # self.df["raw_data_location"] = raw_data_file_name
-
         self.parse_sequence_modifications()
 
         self._extract_scan_number()
 
-        # Save as CSV file
-        # self._save_to_csv(self.input_file)
-
-        # score_col = "casanovo:opt_ms_run[1]_aa_scores" #check if redundant
-        # if score_col in self.df.columns:
-        # Replace commas with semicolons in the score column data
-        # self.df[score_col] = self.df[score_col].str.replace(',', ';', regex=False)
-
-        # Convert retention time from minutes to seconds BEFORE process_unify_style
         if "retention_time_seconds" in self.df.columns:
             self.df["retention_time_seconds"] = self.df[
                 "retention_time_seconds"

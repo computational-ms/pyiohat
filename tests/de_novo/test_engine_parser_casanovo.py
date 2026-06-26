@@ -121,12 +121,6 @@ def test_engine_parsers_casanovo_check_dataframe_integrity():
         == df["sequence"].str.count("C")
     ).all()
     assert df["modifications"].str.count(":").sum() == 105
-    # NOTE: `raw_data_location` is currently never set in Casanovo_5_Parser.unify() —
-    # the block that builds it from self.input_file is commented out, so this
-    # column won't exist on `df` and the line below will raise a KeyError.
-    # Uncomment once that logic is restored in the parser, or remove if the
-    # column is no longer expected.
-    # assert (df["raw_data_location"] == "path/for/glory.mzML").all()
 
 
 def test_map_mod_translation_casanovo():
@@ -155,10 +149,6 @@ def test_map_mod_translation_casanovo():
         },
     )
 
-    # Manual injection of a dataframe to test specific mapping logic.
-    # NOTE: the new parser reads modifications from a separate mzTab-style
-    # "modifications" column (e.g. "2-Oxidation (M):UNIMOD:35"), not from
-    # bracket notation embedded directly in the sequence string.
     parser.df = pd.DataFrame(
         {
             "sequence": ["LMDKPEQLR"],
@@ -221,7 +211,6 @@ def test_map_mod_translation_casanovo_mass_shift():
 
     df = parser.unify()
 
-    # Resolved name should carry the same position the mass-shift entry specified.
     assert df["modifications"].iloc[0] == "Oxidation:2"
     assert df["sequence"].iloc[0] == "LMDKPEQLR"
 
@@ -269,10 +258,8 @@ def test_map_mod_translation_casanovo_mass_shift_no_mass_to_name():
     )
     df = parser.unify()
 
-    # Resolved name should carry the same position the mass-shift entry specified.
     assert not df["modifications"].iloc[0] or pd.isna(df["modifications"].iloc[0])
 
-    # Verify that mass_delta is strictly between 25 and 28
     assert 25 < df["mass_delta"].iloc[0] < 28
 
     assert df["sequence"].iloc[0] == "LMDKPEQLR"
@@ -321,80 +308,6 @@ def test_map_mod_translation_casanovo_multiple_mass_shifts():
     )
     df = parser.unify()
 
-    # When multiple mass shifts cannot be resolved, modifications column should be empty
     assert not df["modifications"].iloc[0] or pd.isna(df["modifications"].iloc[0])
 
     assert df["sequence"].iloc[0] == "LMDKPEQLR"
-
-
-# Tests for n-term and digits
-# def test_c_terminal_tmt():
-#     input_file = pytest._test_path / "data" / "test_casanovo.mztab"
-
-#     parser = Casanovo_5_Parser(
-#         input_file,
-#         params={
-#             "cpus": 2,
-#             "enzyme": "(?<=[KR])(?![P])",
-#             "terminal_cleavage_site_integrity": "any",
-#             "modifications": [
-#                 {
-#                     "aa": "M",
-#                     "type": "opt",
-#                     "position": "any",
-#                     "name": "Oxidation",
-#                 },
-#                 {
-#                     "aa": "*",
-#                     "type": "opt",
-#                     "position": "Prot-N-term",
-#                     "name": "Acetyl",
-#                 },
-#                 {
-#                     "aa": "*",
-#                     "type": "opt",
-#                     "position": "N-term",
-#                     "name": "TMT6plex",
-#                 },
-#                 {
-#                     "aa": "C",
-#                     "type": "fix",
-#                     "position": "any",
-#                     "name": "Carbamidomethyl",
-#                 },
-#                 {
-#                     "aa": "K",
-#                     "type": "fix",
-#                     "position": "any",
-#                     "name": "TMT6plex",
-#                 },
-#             ],
-#             "15N": False,
-#         },
-#     )
-#     converted = parser.translate_mods()
-#     assert converted[0] == "TMT6plex:0;TMT6plex:6"
-#     assert converted[1] == "TMT6plex:0"
-
-
-# def test_msfragger_open_search():
-#    input_file = pytest._test_path / "data" / "BSA1_open_search.msfragger4.tsv"
-#    rt_lookup_path = pytest._test_path / "data" / "BSA1_ursgal_lookup.csv"
-#    db_path = pytest._test_path / "data" / "BSA.fasta"
-
-#    parser = Casanovo_5_Parser(
-#        input_file,
-#        params={
-#            "cpus": 2,
-#            "rt_pickle_name": rt_lookup_path,
-#            "database": db_path,
-#            "enzyme": "(?<=[KR])(?![P])",
-#            "terminal_cleavage_site_integrity": "any",
-#            "validation_score_field": {"MSFragger_4_0": "msfragger:hyperscore"},
-#            "bigger_scores_better": {"MSFragger_4_0": True},
-#            "modifications": [],
-#            "15N": False,
-#        },
-#    )
-#    df = parser.unify()
-#    assert df["mass_delta"].mean() == pytest.approx(458.901, abs=1e-6)

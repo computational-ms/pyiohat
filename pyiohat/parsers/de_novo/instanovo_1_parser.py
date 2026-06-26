@@ -31,8 +31,6 @@ class Instanovo_1_Parser(DeNovoBaseParser):
 
         self.df.dropna(axis=1, how="all", inplace=True)
 
-        # pprint(f"direct file read from msf out")
-        # pprint(self.df)
         columns = set(self.df.columns.str.strip())
 
         if "final_prediction" in columns:
@@ -79,12 +77,8 @@ class Instanovo_1_Parser(DeNovoBaseParser):
                 f"Cannot determine sequence column from InstaNovo CSV headers. "
                 f"Expected 'final_prediction' or 'predictions', got: {sorted(columns)}"
             )
-        # pprint(f"mapping dict")
-        # pprint(self.mapping_dict)
         self.df.rename(columns=self.mapping_dict, inplace=True)
 
-        # pprint(f"renamed df")
-        # pprint(self.df)
         self.df.columns = self.df.columns.str.lstrip(" ")
         self.reference_dict.update({k: None for k in self.mapping_dict.values()})
         self.metadata = {
@@ -108,15 +102,12 @@ class Instanovo_1_Parser(DeNovoBaseParser):
 
         seq_col_index = self.df.columns.get_loc(seq_col)
 
-        # Initialize modifications and mass difference column if it doesn't exist
         if "modifications" not in self.df.columns:
             self.df["modifications"] = None
 
-        # Initialize lists for new data
         modifications_list = []
         cleaned_sequences = []
 
-        # Process ALL rows (starting from 0, not 1)
         for idx in range(len(self.df)):
             seq = self.df.iloc[idx, seq_col_index]
 
@@ -158,7 +149,7 @@ class Instanovo_1_Parser(DeNovoBaseParser):
                         modifications.append(f"{matched_names[0]}:{position}")
                     else:
                         # Fallback if the mapper returned an empty list
-                        modifications.append(f"{mod_name}:{position}")
+                        raise KeyError(f"Unable to map {matched_names[0]}:{position}'.")
                 except Exception as e:
                     logger.info(
                         f"DEBUG: Exception during mod lookup for '{mod_name}': {e}"
@@ -173,8 +164,6 @@ class Instanovo_1_Parser(DeNovoBaseParser):
             cleaned_seq = re.sub(r"\[[^\]]+\]", "", seq)
             cleaned_seq = cleaned_seq.strip("-")
             cleaned_sequences.append(cleaned_seq)
-
-        # Add Mass Difference column (insert after sequence column)
 
         # Update modifications and sequence columns
         self.df["modifications"] = modifications_list
