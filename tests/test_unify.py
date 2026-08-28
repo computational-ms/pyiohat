@@ -60,7 +60,10 @@ def test_unify_get_parser_classes():
     quant_files = (
         len(list((Path(pyiohat.__path__[0]) / "parsers" / "quant").glob("*.py"))) - 1
     )
-    assert len(u._parser_classes) == ident_files + quant_files
+    de_novo_files = (
+        len(list((Path(pyiohat.__path__[0]) / "parsers" / "de_novo").glob("*.py"))) - 1
+    )
+    assert len(u._parser_classes) == ident_files + quant_files + de_novo_files
 
 
 def test_unify_get_omssa_parser():
