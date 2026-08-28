@@ -1,7 +1,7 @@
-"""Ident base parser class."""
+"""De novo base parser class."""
 
-import csv
 import multiprocessing as mp
+import tracemalloc
 
 from pathlib import Path
 import ahocorasick
@@ -21,14 +21,9 @@ from pyiohat.parsers.misc import (
 )
 from pyiohat.utils import merge_and_join_dicts
 
-try:
-    mp.set_start_method(method="fork")
-except RuntimeError:
-    logger.warning("MP fork already set")
 
-
-class IdentBaseParser(BaseParser):
-    """Base class of all ident parsers."""
+class DeNovoBaseParser(BaseParser):
+    """Base class of all de novo parsers."""
 
     def __init__(self, *args, **kwargs):
         """Initialize parser.
@@ -39,6 +34,7 @@ class IdentBaseParser(BaseParser):
         self.DELIMITER = self.params.get("delimiter", "<|>")
         self.PROTON = PROTON
         self.IUPAC_AAS = tuple("ACDEFGHIKLMNPQRSTUVWY")
+        self.MIN_PEPTIDE_LEN = self.params.get("min_pep_length", 0)
         self.df = None
 
         self.non_mappable_mods = set(
@@ -51,7 +47,7 @@ class IdentBaseParser(BaseParser):
             "modifications": None,
             "retention_time_seconds": None,
         }
-        self.required_headers = self._load_model("ident_parser_model.json")
+        self.required_headers = self._load_model("de_novo_parser_model.json")
         self.col_order = pd.Series(self.required_headers.keys())
 
     def _calc_mz(self, mass, charge):
@@ -118,20 +114,25 @@ class IdentBaseParser(BaseParser):
 
         Operations are performed inplace on self.df
         """
+        if "protein_id" not in self.df.columns:
+            self.df["protein_id"] = None
         peptide_mapper = UPeptideMapper(self.params["database"])
 
-        if self.style and self.style in ("pglyco_db_style_1"):
-            self.df["tmp_sequence"] = self.df["sequence"].copy()
-            mask = self.df["peptide_is_decoy"]
-            self.df.loc[mask, "tmp_sequence"] = self.df.loc[mask, "tmp_sequence"].str[
-                ::-1
+        if self.MIN_PEPTIDE_LEN > 0:
+            valid_seqs = [
+                seq
+                for seq in self.df["sequence"]
+                if isinstance(seq, str) and len(seq) >= self.MIN_PEPTIDE_LEN
             ]
-            mapped_peptides = peptide_mapper.map_peptides(
-                self.df["tmp_sequence"].tolist()
-            )
+            mapped_peptides = peptide_mapper.map_peptides(valid_seqs)
+
             peptide_mappings = [
-                merge_and_join_dicts(mapped_peptides[seq], self.DELIMITER)
-                for seq in self.df["tmp_sequence"]
+                (
+                    merge_and_join_dicts(mapped_peptides[seq], self.DELIMITER)
+                    if seq in mapped_peptides
+                    else {}
+                )
+                for seq in self.df["sequence"]
             ]
         else:
             mapped_peptides = peptide_mapper.map_peptides(self.df["sequence"].tolist())
@@ -151,13 +152,16 @@ class IdentBaseParser(BaseParser):
         new_columns = pd.DataFrame(peptide_mappings)
         new_columns.rename(columns=columns_translations, inplace=True)
 
-        self.df.loc[:, new_columns.columns] = new_columns.values
-        new_columns = new_columns.dropna(axis=0, how="all")
-        if len(new_columns) != len(self.df):
+        for col in new_columns.columns:
+            self.df[col] = new_columns[col].values
+        # Keep unmapped sequences but mark them to be skipped for other functions
+        self.df["mapped"] = ~new_columns.isna().all(axis=1)
+
+        unmapped_count = (~self.df["mapped"]).sum()
+        if unmapped_count > 0:
             logger.warning(
-                f"{len(self.df) - len(new_columns)} PSMs were dropped because their respective sequences could not be mapped."
+                f"{unmapped_count} PSMs could not be mapped and thus certain functions will not be applied to them"
             )
-        self.df = self.df.iloc[new_columns.index, :].reset_index(drop=True)
 
         if self.style and self.style in ("pglyco_db_style_1"):
             self.df.drop("tmp_sequence", axis=1, inplace=True)
@@ -183,19 +187,30 @@ class IdentBaseParser(BaseParser):
 
         enzyme_pattern = self.params["enzyme"]
         integrity_strictness = self.params["terminal_cleavage_site_integrity"]
+        # Initialize columns for all rows (including unmapped)
+        self.df.loc[:, ["enzn", "enzc"]] = False
+        self.df.loc[:, "missed_cleavages"] = 0
+
+        # Only process mapped PSMs
+        if "mapped" not in self.df.columns or not self.df["mapped"].any():
+            logger.warning("No mapped PSMs found to check enzyme specificity.")
+            return None
+
+        mapped_mask = self.df["mapped"]
+        mapped_df = self.df[mapped_mask]
 
         pren_seq = (
             pd.concat(
                 [
-                    self.df["sequence_pre_aa"].str.split(rf"{self.DELIMITER}"),
-                    self.df["sequence"].str[:1],
+                    mapped_df["sequence_pre_aa"].str.split(rf"{self.DELIMITER}"),
+                    mapped_df["sequence"].str[:1],
                 ],
                 axis=1,
             )
             .explode("sequence_pre_aa")
             .sum(axis=1)
         )
-        self.df.loc[:, "enzn"] = (
+        self.df.loc[mapped_mask, "enzn"] = (
             pren_seq.str.split(rf"{enzyme_pattern}").str[0].str.len() == 1
         ).groupby(pren_seq.index).agg(integrity_strictness) | (
             pren_seq.str[0] == "-"
@@ -207,15 +222,15 @@ class IdentBaseParser(BaseParser):
         postc_seq = (
             pd.concat(
                 [
-                    self.df["sequence"].str[-1:],
-                    self.df["sequence_post_aa"].str.split("<\\|>"),
+                    mapped_df["sequence"].str[-1:],
+                    mapped_df["sequence_post_aa"].str.split("<\\|>"),
                 ],
                 axis=1,
             )
             .explode("sequence_post_aa")
             .sum(axis=1)
         )
-        self.df.loc[:, "enzc"] = (
+        self.df.loc[mapped_mask, "enzc"] = (
             postc_seq.str.split(rf"{enzyme_pattern}").str[0].str.len() == 1
         ).groupby(postc_seq.index).agg(integrity_strictness) | (
             postc_seq.str[-1] == "-"
@@ -225,8 +240,8 @@ class IdentBaseParser(BaseParser):
             integrity_strictness
         )
 
-        internal_cuts = self.df["sequence"].str.split(rf"{enzyme_pattern}")
-        self.df.loc[:, "missed_cleavages"] = (
+        internal_cuts = mapped_df["sequence"].str.split(rf"{enzyme_pattern}")
+        self.df.loc[mapped_mask, "missed_cleavages"] = (
             internal_cuts.apply(len)
             - internal_cuts.apply(lambda row: "" in row).astype(int)
             - 1
@@ -255,7 +270,7 @@ class IdentBaseParser(BaseParser):
         self.df.loc[:, "ucalc_mass"] = mono_masses
 
         with mp.Pool(
-            self.params.get("cpus", mp.cpu_count() - 1),
+            self.params.get("cpus", 1),
             initializer=init_custom_cc,
             initargs=(
                 get_isotopologue_accuracy,
@@ -312,7 +327,7 @@ class IdentBaseParser(BaseParser):
             )
             for name, grp in self.df.groupby("spectrum_id"):
                 if name not in rt_lookup:
-                    logger.error(
+                    raise KeyError(
                         f"Could not uniquely assign meta data to spectrum id {name}."
                     )
                 meta = rt_lookup[name]
@@ -328,8 +343,62 @@ class IdentBaseParser(BaseParser):
                         meta["rt"][idx],
                     ]
                 else:
-                    logger.error(
+                    raise KeyError(
                         f"Could not uniquely assign meta data to spectrum id {name}."
+                    )
+
+        elif self.style == "instanovo_style_1":
+            logger.warning(
+                "This engine does not provide retention time information. Grouping only by MS_Level. "
+                "This may cause problems when working with multi-file inputs."
+            )
+
+            # Create a sorted list of actual IDs for all MS2 spectra to map 0-based indices
+            ms2_keys = sorted(
+                [
+                    spec_id
+                    for spec_id, meta_dict in rt_lookup.items()
+                    if str(meta_dict.get("ms_level", [None])[0]) == "2"
+                ]
+            )
+            final_scan_val = getattr(self, "last_index", None)
+            if final_scan_val is not None:
+                if (final_scan_val + 1) != len(ms2_keys):
+                    raise KeyError(
+                        f"InstaNovo report contains {final_scan_val + 1} "
+                        f"entries, but raw file contains {len(ms2_keys)} MS2 spectra. Could not uniquely assign meta data. "
+                    )
+
+            for name, grp in self.df.groupby("spectrum_id"):
+                # Convert the InstaNovo ID (0, 1, 2...) to an integer to use as list index
+                idx = int(name)
+
+                if idx < len(ms2_keys):
+                    true_spectrum_id = ms2_keys[idx]
+                    meta = rt_lookup[true_spectrum_id]
+                    distinct_rts = set(meta["rt"])
+                    if len(distinct_rts) != 1:
+                        raise KeyError(
+                            f"Could not uniquely assign meta data to spectrum id {true_spectrum_id}."
+                        )
+
+                    self.df.loc[
+                        grp.index,
+                        (
+                            "raw_data_location",
+                            "exp_mz",
+                            "retention_time_seconds",
+                            "spectrum_id",
+                        ),
+                    ] = [
+                        meta["lineage_root"][0],
+                        meta["precursor_mz"][0],
+                        meta["rt"][0],
+                        true_spectrum_id,
+                    ]
+                else:
+                    raise KeyError(
+                        f"InstaNovo ID {idx} exceeds available MS2 spectra ({len(ms2_keys)})."
                     )
         else:
             self.df["retention_time_seconds"] = self.df[
@@ -338,7 +407,7 @@ class IdentBaseParser(BaseParser):
             for name, grp in self.df.groupby(["spectrum_id", "retention_time_seconds"]):
                 spec_id, group_rt = name
                 if spec_id not in rt_lookup:
-                    logger.error(
+                    raise KeyError(
                         f"Could not uniquely assign meta data to spectrum id, retention time {name}."
                     )
                 meta = rt_lookup[spec_id]
@@ -358,7 +427,7 @@ class IdentBaseParser(BaseParser):
                         meta["rt"][idx],
                     ]
                 else:
-                    logger.error(
+                    raise KeyError(
                         f"Could not uniquely assign meta data to spectrum id, retention time {name}."
                     )
 
@@ -396,10 +465,20 @@ class IdentBaseParser(BaseParser):
         Operations are performed inplace on self.df
         """
         decoy_tag = self.params.get("decoy_tag", "decoy_")
-        self.df.loc[:, "is_decoy"] = self.df["protein_id"].str.contains(decoy_tag)
+
+        # Only check protein_id for mapped PSMs
+        if "mapped" in self.df.columns:
+            self.df.loc[:, "is_decoy"] = float("nan")
+            mapped_mask = self.df["mapped"]
+            self.df.loc[mapped_mask, "is_decoy"] = (
+                self.df.loc[mapped_mask, "protein_id"].str.contains(decoy_tag, na=False)
+            ).astype(float)
+
+        # Glycan/peptide decoy logic applies to all rows (mapped or not)
         if "glycan_is_decoy" in self.df.columns:
             mask = self.df["glycan_is_decoy"] | self.df["peptide_is_decoy"]
             self.df.loc[mask, "is_decoy"] = True
+
         if self.immutable_peptides is not None:
             auto = ahocorasick.Automaton()
             for seq in self.immutable_peptides:
@@ -413,10 +492,12 @@ class IdentBaseParser(BaseParser):
             self.df.loc[:, "is_immutable"] = False
 
     def process_unify_style(self):
+        tracemalloc.start()
         """Combine all additional operations that are needed to calculate new columns and sanitize the dataframe.
 
         Operations are performed inplace on self.df
         """
+
         self.df.drop_duplicates(inplace=True, ignore_index=True)
         self.clean_up_modifications()
         self.assert_only_iupac_and_missing_aas()

@@ -50,13 +50,20 @@ class FlashLFQ_1_2_0_Parser(QuantBaseParser):
 
         self.rt_to_spec_id = {}
         self.filestem_to_path = {}
-        for key, val in self.rt_lookup.items():
-            for key2, val2 in val.items():
-                self.rt_to_spec_id.setdefault(val2[0], {})[
-                    round(key2, self.round_precision)
-                ] = key
-                if val2[0] not in self.filestem_to_path:
-                    self.filestem_to_path[Path(val2[0]).stem] = val2[0]
+        for spec_id, metadata in self.rt_lookup.items():
+
+            file_path = metadata.get("lineage_root")
+            rt_value = metadata.get("rt")
+            if isinstance(file_path, list):
+                file_path = file_path[0] if file_path else None
+            if file_path is not None and rt_value is not None:
+                rt_list = rt_value if isinstance(rt_value, list) else [rt_value]
+                for rt in rt_list:
+                    rounded_rt = round(rt, self.round_precision)
+                self.rt_to_spec_id.setdefault(file_path, {})[rounded_rt] = spec_id
+                stem = Path(file_path).stem
+                if stem not in self.filestem_to_path:
+                    self.filestem_to_path[stem] = file_path
 
             # round(list(d.keys())[0], self.round_precision): key
             # for key, d in self.rt_lookup.items()
