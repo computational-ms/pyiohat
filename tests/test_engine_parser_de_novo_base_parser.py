@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pyiohat.parsers.ident_base_parser import IdentBaseParser
+from pyiohat.parsers.de_novo_base_parser import DeNovoBaseParser
 from pyiohat.utils import merge_and_join_dicts
 
 
@@ -14,7 +14,7 @@ def test_base_parser_read_rt_lookup_file():
         pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_xtandem_alanine.xml"
     )
 
-    bp = IdentBaseParser(input_file, params={"rt_pickle_name": rt_lookup_path})
+    bp = DeNovoBaseParser(input_file, params={"rt_pickle_name": rt_lookup_path})
     rt_lookup = bp._read_meta_info_lookup_file()
     assert len(rt_lookup) == 1120
     precursor_mzs = [mz for specs in rt_lookup.values() for mz in specs["precursor_mz"]]
@@ -24,14 +24,14 @@ def test_base_parser_read_rt_lookup_file():
     assert pytest.approx(rt_lookup[2450]["precursor_mz"]) == [618.2697754]
 
 
-def test_engine_parsers_IdentBaseParser_init():
+def test_engine_parsers_DeNovoBaseParser_init():
     input_file = (
         pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_xtandem_alanine.xml"
     )
     rt_lookup_path = pytest._test_path / "data" / "_ursgal_lookup.csv"
     db_path = pytest._test_path / "data" / "test_Creinhardtii_target_decoy.fasta"
 
-    parser = IdentBaseParser(
+    parser = DeNovoBaseParser(
         input_file,
         params={
             "cpus": 2,
@@ -61,25 +61,26 @@ def test_engine_parsers_IdentBaseParser_init():
     )
 
 
-def test_engine_parsers_IdentBaseParser_check_parser_compatibility_non_existing():
+def test_engine_parsers_DeNovoBaseParser_check_parser_compatibility_non_existing():
     # should always return False
-    IdentBaseParser.check_parser_compatibility("whatever") is False
+    DeNovoBaseParser.check_parser_compatibility("whatever") is False
 
 
-def test_engine_parsers_IdentBaseParser_check_parser_compatibility_existing():
+def test_engine_parsers_DeNovoBaseParser_check_parser_compatibility_existing():
     # should always return False
-    IdentBaseParser.check_parser_compatibility(
+    DeNovoBaseParser.check_parser_compatibility(
         pytest._test_path / "data" / "test_Creinhardtii_QE_pH11_xtandem_alanine.xml"
     ) is False
 
 
 def test_engine_parsers_IdentBase_Parser_sanitize():
-    obj = IdentBaseParser(input_file=None, params=None)
+    obj = DeNovoBaseParser(input_file=None, params=None)
     obj.mapping_dict = {"Engine:C": None, "Engine:B": None, "Engine:A": None}
     obj.df = pd.DataFrame(
-        np.random.random((5, len(obj.col_order) + 4)),
+        index=range(5),
         columns=obj.col_order.to_list()
         + ["Engine:C", "Engine:B", "Engine:A", "This should not exist"],
+        dtype=object,
     )
     str_cols = [c for c, dtype in obj.required_headers.items() if dtype == "str"]
     int_cols = [c for c, dtype in obj.required_headers.items() if dtype == "Int32"]
@@ -102,7 +103,7 @@ def test_engine_parsers_IdentBase_Parser_sanitize():
 
 
 def test_add_ranks_increasing_engine_scores_better():
-    obj = IdentBaseParser(
+    obj = DeNovoBaseParser(
         input_file=None,
         params={},
     )
@@ -123,7 +124,7 @@ def test_add_ranks_increasing_engine_scores_better():
 
 
 def test_add_ranks_decreasing_engine_scores_better():
-    obj = IdentBaseParser(
+    obj = DeNovoBaseParser(
         input_file=None,
         params={
             "validation_score_field": {"msgfplus_2021_03_22": "ms-gf:spec_evalue"},
@@ -147,7 +148,7 @@ def test_add_ranks_decreasing_engine_scores_better():
 
 
 def test_add_protein_ids():
-    obj = IdentBaseParser(
+    obj = DeNovoBaseParser(
         input_file=None,
         params={
             "cpus": 2,
@@ -171,6 +172,7 @@ def test_add_protein_ids():
         "sequence_pre_aa",
         "sequence_start",
         "msfragger:hyperscore",
+        "mapped",
     }
     assert obj.df.loc[0, "sequence_start"] == "287"
     assert obj.df.loc[0, "sequence_stop"] == "295"
@@ -183,7 +185,7 @@ def test_add_protein_ids():
 
 
 def test_calc_masses_offsets_and_composition():
-    obj = IdentBaseParser(
+    obj = DeNovoBaseParser(
         input_file=None,
         params={
             "cpus": 2,
@@ -237,7 +239,7 @@ def test_calc_masses_offsets_and_composition():
 
 
 def test_get_exp_rt_and_mz():
-    obj = IdentBaseParser(
+    obj = DeNovoBaseParser(
         input_file=None,
         params={
             "cpus": 2,
@@ -268,7 +270,7 @@ def test_get_exp_rt_and_mz():
 
 
 def test_mapped_mods():
-    obj = IdentBaseParser(
+    obj = DeNovoBaseParser(
         input_file=None,
         params={
             "cpus": 2,
@@ -301,7 +303,7 @@ def test_mapped_mods():
 
 
 def test_calc_mz():
-    obj = IdentBaseParser(input_file=None, params=None)
+    obj = DeNovoBaseParser(input_file=None, params=None)
     masses_in_weird_types = pd.Series(["10", 20, 30.0])
     charges_in_weird_types = pd.Series(["2", 2, 2.0])
     mz = obj._calc_mz(masses_in_weird_types, charges_in_weird_types).to_list()
@@ -312,7 +314,7 @@ def test_calc_mz():
 
 
 def test_calc_mass():
-    obj = IdentBaseParser(input_file=None, params=None)
+    obj = DeNovoBaseParser(input_file=None, params=None)
     mzs_in_weird_types = pd.Series(["6", 11, 16.0])
     charges_in_weird_types = pd.Series(["2", 2, 2.0])
     mz = obj._calc_mass(mzs_in_weird_types, charges_in_weird_types).to_list()
@@ -323,7 +325,7 @@ def test_calc_mass():
 
 
 def test_get_closest_isotopologue():
-    obj = IdentBaseParser(
+    obj = DeNovoBaseParser(
         input_file=None,
         params={
             "cpus": 2,
@@ -369,7 +371,7 @@ def test_get_closest_isotopologue():
 
 
 def test_get_composition():
-    obj = IdentBaseParser(
+    obj = DeNovoBaseParser(
         input_file=None,
         params={
             "cpus": 2,
@@ -437,7 +439,7 @@ def test_merge_and_join_dicts():
 
 
 def test_assert_only_iupac_and_missing_aas():
-    obj = IdentBaseParser(
+    obj = DeNovoBaseParser(
         input_file=None,
         params={
             "cpus": 2,
@@ -455,7 +457,7 @@ def test_assert_only_iupac_and_missing_aas():
 
 
 def test_add_decoy_identity():
-    obj = IdentBaseParser(
+    obj = DeNovoBaseParser(
         input_file=None,
         params={
             "cpus": 2,
@@ -463,18 +465,20 @@ def test_add_decoy_identity():
         },
     )
     obj.df = pd.DataFrame(
-        np.ones((4, len(obj.col_order) + 1)),
-        columns=obj.col_order.to_list() + ["msfragger:hyperscore"],
-    )
+        index=range(4),
+        columns=obj.col_order.to_list() + ["msfragger:hyperscore", "mapped"],
+    ).astype(object)
+    obj.df["mapped"] = True
+    obj.df["is_decoy"] = False
     obj.df["protein_id"] = ["NOTADECOY", "PEPTIDE", "decoy_PEPTIDE", "decoy_ASDF"]
 
     obj.add_decoy_identity()
 
-    assert all(obj.df["is_decoy"] == [False, False, True, True])
+    assert obj.df["is_decoy"].astype(bool).tolist() == [False, False, True, True]
 
 
 def test_add_decoy_identity_non_default_prefix():
-    obj = IdentBaseParser(
+    obj = DeNovoBaseParser(
         input_file=None,
         params={
             "cpus": 2,
@@ -483,9 +487,11 @@ def test_add_decoy_identity_non_default_prefix():
         },
     )
     obj.df = pd.DataFrame(
-        np.ones((4, len(obj.col_order) + 1)),
-        columns=obj.col_order.to_list() + ["msfragger:hyperscore"],
-    )
+        index=range(4),
+        columns=obj.col_order.to_list() + ["msfragger:hyperscore", "mapped"],
+    ).astype(object)
+    obj.df["mapped"] = True
+    obj.df["is_decoy"] = False
     obj.df["protein_id"] = [
         "NOTADECOY",
         "PEPTIDE",
@@ -495,11 +501,11 @@ def test_add_decoy_identity_non_default_prefix():
 
     obj.add_decoy_identity()
 
-    assert all(obj.df["is_decoy"] == [False, False, False, True])
+    assert obj.df["is_decoy"].astype(bool).tolist() == [False, False, False, True]
 
 
 def test_add_decoy_identity_with_immutable_peptides():
-    obj = IdentBaseParser(
+    obj = DeNovoBaseParser(
         input_file=None,
         params={
             "cpus": 2,
@@ -531,7 +537,7 @@ def test_add_decoy_identity_with_immutable_peptides():
 
 
 def test_check_enzyme_specificity_trypsin_all():
-    obj = IdentBaseParser(
+    obj = DeNovoBaseParser(
         input_file=None,
         params={
             "cpus": 2,
@@ -547,6 +553,7 @@ def test_check_enzyme_specificity_trypsin_all():
     obj.df["sequence"] = ["PEPRTIDEK", "EPTIDEK", "EPTIDEK", "EPRPTRIRDEK"]
     obj.df["sequence_pre_aa"] = ["K", "K", "A", "K"]
     obj.df["sequence_post_aa"] = ["A", "P", "A<|>P", "A<|>V"]
+    obj.df["mapped"] = True
     obj.check_enzyme_specificity()
 
     assert all(obj.df["enzn"] == [False, True, False, True])
@@ -555,7 +562,7 @@ def test_check_enzyme_specificity_trypsin_all():
 
 
 def test_check_enzyme_specificity_trypsin_any():
-    obj = IdentBaseParser(
+    obj = DeNovoBaseParser(
         input_file=None,
         params={
             "cpus": 2,
@@ -571,6 +578,7 @@ def test_check_enzyme_specificity_trypsin_any():
     obj.df["sequence"] = ["PEPRTIDEK", "EPTIDEK", "EPTIDEK", "EPTIDEK"]
     obj.df["sequence_pre_aa"] = ["K", "K", "A", "K"]
     obj.df["sequence_post_aa"] = ["A", "P", "A<|>P", "A<|>V"]
+    obj.df["mapped"] = True
     obj.check_enzyme_specificity()
 
     assert all(obj.df["enzn"] == [False, True, False, True])
@@ -579,7 +587,7 @@ def test_check_enzyme_specificity_trypsin_any():
 
 
 def test_check_enzyme_specificity_nonspecific():
-    obj = IdentBaseParser(
+    obj = DeNovoBaseParser(
         input_file=None,
         params={
             "cpus": 2,
@@ -595,6 +603,7 @@ def test_check_enzyme_specificity_nonspecific():
     obj.df["sequence"] = ["ASDF", "EPTIDEK", "EPTIDEK", "EPTIDEK"]
     obj.df["sequence_pre_aa"] = ["L<|>E", "A", "R", "P"]
     obj.df["sequence_post_aa"] = ["F", "L<|>E", "A<|>P", "A<|>V"]
+    obj.df["mapped"] = True
     obj.check_enzyme_specificity()
 
     assert all(obj.df["enzn"] == [True, True, True, True])
@@ -603,7 +612,7 @@ def test_check_enzyme_specificity_nonspecific():
 
 
 def test_groupby_rt_and_spec_id():
-    obj = IdentBaseParser(
+    obj = DeNovoBaseParser(
         input_file=None,
         params={
             "cpus": 2,
@@ -636,7 +645,7 @@ def test_groupby_rt_and_spec_id():
 
 
 def test_clean_up_modifications():
-    obj = IdentBaseParser(
+    obj = DeNovoBaseParser(
         input_file=None,
         params={
             "cpus": 2,
