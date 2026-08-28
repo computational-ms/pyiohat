@@ -69,7 +69,7 @@ def test_engine_parsers_pglyco_metadata():
             ],
         },
     )
-    assert parser.metadata["File Origin"] == "pGlyco"
+    assert parser.metadata["File Origin"] == "pglyco_3"
 
 
 def test_engine_parsers_pglyco_check_parser_compatibility():
