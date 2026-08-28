@@ -175,6 +175,88 @@ class GlycoDecipher_1_Parser(IdentBaseParser):
 
         return ";".join(transformed_mods)
 
+    def add_glycans_to_modifications(self):
+        """
+        Extends the 'modifications' column by adding glycans from
+        glycan_composition (mapped to canonical sugar names) at the GlySite position.
+        Example: Oxidation:12;HexNAc(2)Hex(3)dHex(1)NeuAc(1):57
+        """
+        return self.df.apply(self._transform_glycan_entry, axis=1)
+
+    def _transform_glycan_entry(self, row):
+        # change glycan_composition names to one used in pyiohat glycan name_to_mass dict for use in ucalc_mass ect.
+        glyco_name_lookup = {
+            "NulNAcA": "NeuAc",
+            "NulNGcA": "NeuGc",
+        }
+        canonical_order = ["HexNAc", "Hex", "dHex", "NeuAc", "NeuGc"]
+
+        base_mods = row.get("modifications", "")
+        gly_comp = row.get("glycan_composition", "")
+
+        gly_site = self._calculate_glycan_position(row)
+
+        if pd.isna(gly_site) or pd.isna(gly_comp):
+            return base_mods
+
+        # --- Parse glycan composition ---
+        gly_dict = {}
+        for match in re.finditer(r"(\w+)\((\d+)\)", gly_comp):
+            full_name, count = match.groups()
+            count = int(count)
+
+            # Apply specific lookups if needed
+            if full_name in glyco_name_lookup:
+                full_name = glyco_name_lookup[full_name]
+
+            if count > 0:
+                gly_dict[full_name] = gly_dict.get(full_name, 0) + count
+
+        # --- Build glycan string in canonical order ---
+        gly_str_parts = []
+        for sugar in canonical_order:
+            if sugar in gly_dict:
+                gly_str_parts.append(f"{sugar}({gly_dict[sugar]})")
+
+        if not gly_str_parts:
+            return base_mods
+
+        gly_str = "".join(gly_str_parts) + f":{gly_site}"
+
+        # --- Combine with existing modifications ---
+        print(f"Added Glycan to Modifications: {gly_str}")
+        if base_mods:
+            return ";".join([base_mods, gly_str])
+        else:
+            return gly_str
+
+    def _calculate_glycan_position(self, row):
+        """
+        Calculates the glycan position based on glyco_decipher:GlycoSite and sequence_start.
+        """
+        glyco_sites_str = row.get("glyco_decipher:GlycoSite", "")
+        sequence_starts_str = row.get("sequence_start", "")
+
+        if pd.isna(glyco_sites_str) or pd.isna(sequence_starts_str):
+            return pd.NA
+
+        glyco_sites = glyco_sites_str.split(";")
+        sequence_starts = sequence_starts_str.split("<|>")
+
+        for i, site in enumerate(glyco_sites):
+            if "/" not in site:
+                # Found a single number site
+                try:
+                    site_val = int(site)
+                    start_val = int(sequence_starts[i])
+                    return site_val - start_val + 1
+                except (ValueError, IndexError):
+                    # Handle cases where conversion fails or index is out of bounds
+                    continue
+
+        # If no single-number site found, return 'n'
+        return "n"
+
     def unify(self):
         """
         Primary method to read and unify engine output.
@@ -190,5 +272,7 @@ class GlycoDecipher_1_Parser(IdentBaseParser):
         self.df["glycan_composition"] = self.convert_glycan_composition()
         self.df["modifications"] = self.adjust_modifications()
         self.process_unify_style()
+        # adding glycans to modifications must happen after process_unify_stlye since the sequence_start columns it required for glyco_site mapping
+        self.df["modifications"] = self.add_glycans_to_modifications()
 
         return self.df
